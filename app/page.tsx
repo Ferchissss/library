@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Book as BookIcon, BookOpen, Star, TrendingUp, Search, Calendar, SortDesc, SortAsc, User, Library, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,8 +13,7 @@ import { ViewModeToggle } from "@/components/view-mode-toggle"
 import { Badge } from "@/components/ui/badge"
 import { AddBookModal } from "@/components/add-book-modal"
 import { supabase } from '@/lib/supabaseClient';
-import type { Book, Quote } from "@/lib/types"  
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { Book, Quote  } from "@/lib/types"  
 
 export default function HomePage() {
   const { viewMode } = useViewMode()
@@ -23,33 +22,35 @@ export default function HomePage() {
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [selectedFavorites, setSelectedFavorites] = useState("all")
   const [sortBy, setSortBy] = useState("default")
-  const queryClient = useQueryClient()
+  const [books, setBooks] = useState<Book[]>([])
+  const [quotesMap, setQuotesMap] = useState<Record<number, Quote[]>>({})
+  const [loading, setLoading] = useState(true)
+  const [statsData, setStatsData] = useState({
+    totalBooks: 0,
+    booksThisYear: 0,
+    totalPages: 0,
+    averageRating: 0,
+  })
 
-  // Query para obtener libros
-  const { data: books = [], isLoading: booksLoading, error: booksError } = useQuery({
-    queryKey: ['books'],
-    queryFn: async () => {
+   // Función para cargar los libros desde Supabase
+  const fetchBooks = async () => {
+    try {
+      setLoading(true)
       const { data, error } = await supabase
         .from('books')
         .select(`*, author:authors (id,name), genres:genres ( id, name ), series:series (id, name)`)
         .order('id', { ascending: false })
       
       if (error) throw error
-      return data || []
-    }
-  })
-
-  // Query para obtener citas
-  const { data: quotesMap = {}, isLoading: quotesLoading } = useQuery({
-    queryKey: ['quotes'],
-    queryFn: async () => {
+      // 2. Obtener citas
       const { data: quotesData, error: quotesError } = await supabase
         .from('quotes')
         .select('*')
       
       if (quotesError) throw quotesError
       
-      return quotesData?.reduce((acc, quote) => {
+      // 3. Crear el mapa de citas
+      const quotesMap = quotesData?.reduce((acc, quote) => {
         if (quote.book_id) {
           if (!acc[quote.book_id]) {
             acc[quote.book_id] = []
@@ -57,64 +58,22 @@ export default function HomePage() {
           acc[quote.book_id].push(quote)
         }
         return acc
-      }, {} as Record<number, Quote[]>) || {}
+      }, {} as Record<number, Quote[]>)
+      setBooks(data || [])
+      setQuotesMap(quotesMap || {})
+      calculateStats(data || [])
+    } catch (error) {
+      const err = error as Error
+      console.error('Error fetching books:', err.message)
+    } finally {
+      setLoading(false)
     }
-  })
-
-  // Mutation para actualizar libros
-  const updateBookMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
-      const { error } = await supabase
-        .from('books')
-        .update(updates)
-        .eq('id', id)
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['books'] })
-    },
-    onError: (error) => {
-      console.error('Error updating book:', error)
-    }
-  })
-
-  // Mutation para géneros
-  const updateBookGenresMutation = useMutation({
-    mutationFn: async ({ bookId, genreIds }: { bookId: number; genreIds: number[] }) => {
-      // Eliminar relaciones existentes
-      await supabase
-        .from("book_genre")
-        .delete()
-        .eq("book_id", bookId)
-
-      // Crear nuevas relaciones si hay géneros
-      if (genreIds.length > 0) {
-        const genreInserts = genreIds.map(genreId => ({
-          book_id: bookId,
-          genre_id: genreId
-        }))
-
-        const { error } = await supabase
-          .from("book_genre")
-          .insert(genreInserts)
-
-        if (error) throw error
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['books'] })
-    },
-    onError: (error) => {
-      console.error('Error updating genres:', error)
-    }
-  })
-
-  // Calcular estadísticas
-  const statsData = useMemo(() => {
+  }
+  // Función para calcular estadísticas
+  const calculateStats = (books: Book[]) => {
     const currentYear = new Date().getFullYear()
     
-    return {
+    const stats = {
       totalBooks: books.length,
       booksThisYear: books.filter(book => {
         const year = book.end_date ? new Date(book.end_date).getFullYear() : null
@@ -125,61 +84,49 @@ export default function HomePage() {
         ? parseFloat((books.reduce((sum, book) => sum + (book.rating || 0), 0) / books.length).toFixed(1))
         : 0,
     }
-  }, [books])
-
-  const filteredBooks = useMemo(() => {
-    return books
-      .filter((book) => {
-        const matchesSearch =
-          book.title.toLowerCase().includes(searchTerm.toLowerCase())
-
-        const matchesFavorites =
-          selectedFavorites === "all" ||
-          (selectedFavorites === "favorites" && book.favorite) ||
-          (selectedFavorites === "non-favorites" && !book.favorite)
-
-        return matchesSearch && matchesFavorites
-      })
-      .sort((a, b) => {
-        switch (sortBy) {
-          case "rating-desc":
-            return (b.rating ?? 0) - (a.rating ?? 0)
-          case "rating-asc":
-            return (a.rating ?? 0) - (b.rating ?? 0)
-          case "title":
-            return a.title.localeCompare(b.title)
-          case "author":
-            return (a.author?.name ?? "").localeCompare(b.author?.name ?? "")        
-          case "pages-desc":
-            return (b.pages ?? 0) - (a.pages ?? 0)
-          case "pages-asc":
-            return (a.pages ?? 0) - (b.pages ?? 0)
-          case "orden-asc":
-            return a.orden - b.orden 
-          default:  
-            return b.orden - a.orden 
-        }
-      })
-  }, [books, searchTerm, selectedFavorites, sortBy])
-
-  const loading = booksLoading || quotesLoading
-
-  if (booksError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#f8f3fc" }}>
-        <div className="text-center">
-          <div className="text-red-600 mb-4">Error al cargar los libros</div>
-          <Button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['books'] })}
-            variant="outline"
-            className="border-purple-300 text-purple-600"
-          >
-            Reintentar
-          </Button>
-        </div>
-      </div>
-    )
+    
+    setStatsData(stats)
   }
+
+  // Cargar libros al montar el componente
+  useEffect(() => {
+    fetchBooks()
+  }, [])
+
+  const filteredBooks = books
+    .filter((book) => {
+      const matchesSearch =
+        book.title.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const matchesFavorites =
+        selectedFavorites === "all" ||
+        (selectedFavorites === "favorites" && book.favorite) ||
+        (selectedFavorites === "non-favorites" && !book.favorite)
+
+      return matchesSearch && matchesFavorites
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "rating-desc":
+          return (b.rating ?? 0) - (a.rating ?? 0)
+        case "rating-asc":
+          return (a.rating ?? 0) - (b.rating ?? 0)
+        case "title":
+          return a.title.localeCompare(b.title)
+        case "author":
+          return (a.author?.name ?? "").localeCompare(b.author?.name ?? "")        
+        case "pages-desc":
+          return (b.pages ?? 0) - (a.pages ?? 0)
+        case "pages-asc":
+          return (a.pages ?? 0) - (b.pages ?? 0)
+        case "orden-asc":
+          return a.orden - b.orden 
+        default:  
+          return b.orden - a.orden 
+      }
+    })
+
+  //const genres = [...new Set(booksData.map((book) => book.genre))]
 
   if (loading) {
     return (
@@ -203,7 +150,7 @@ export default function HomePage() {
           </div>
           <div className="flex gap-3">
             <Button
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['books', 'quotes'] })}
+              onClick={fetchBooks}
               disabled={loading}
               variant="outline"
               className="border-purple-300 text-purple-600 hover:bg-purple-100 hover:text-purple-700 transition-all duration-200 px-2 py-1 text-sm rounded-md bg-transparent"
@@ -212,12 +159,9 @@ export default function HomePage() {
                 className={`h-3 w-3 ${loading ? "animate-spin" : ""}`}
               />
             </Button>
-            <AddBookModal 
-              refreshData={() => queryClient.invalidateQueries({ queryKey: ['books'] })} 
-            />
+            <AddBookModal refreshData={fetchBooks} />
           </div>
         </div>
-
         {/* Dashboard Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-md">
@@ -239,7 +183,7 @@ export default function HomePage() {
             <CardContent className="px-3 pb-3">
               <div className="text-xl font-bold text-purple-800">{statsData.totalPages.toLocaleString()}</div>
               <p className="text-xs text-purple-600">
-                Promedio: {statsData.totalBooks > 0 ? Math.round(statsData.totalPages / statsData.totalBooks) : 0} por libro
+                Promedio: {Math.round(statsData.totalPages / statsData.totalBooks)} por libro
               </p>
             </CardContent>
           </Card>
@@ -397,12 +341,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <BookTable 
-            books={filteredBooks} 
-            quotesMap={quotesMap} 
-            updateBookMutation={updateBookMutation}
-            updateBookGenresMutation={updateBookGenresMutation}
-          />
+          <BookTable books={filteredBooks} quotesMap={quotesMap} refreshData={fetchBooks} />
         )}
 
         {filteredBooks.length === 0 && (

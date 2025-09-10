@@ -14,15 +14,13 @@ import { EditableCell } from "./EditableCell"
 import { Button } from "@/components/ui/button"
 import { supabase } from '@/lib/supabaseClient'
 import { toast } from "sonner"
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 interface BookDetailsModalProps {
   book: Book | null
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   quotes: Quote[]
-  updateBookMutation: any
-  updateBookGenresMutation: any
+  refreshData?: () => void
 }
 
 const availableColors = AVAILABLE_COLORS;
@@ -38,59 +36,50 @@ const getGenreColorStyle = (genreName: string) => {
   };
 }
 
-export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, updateBookMutation, updateBookGenresMutation }: BookDetailsModalProps) {
+export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, refreshData }: BookDetailsModalProps) {
   if (!book) return null
 
-  const queryClient = useQueryClient();
   const [editingField, setEditingField] = useState<{section: string, field: string} | null>(null)
+  const [options, setOptions] = useState<Record<string, { value: string; label: string; id?: number }[]>>({})
 
-  // Query para obtener opciones
-  const { data: options } = useQuery({
-    queryKey: ['modal-options'],
-    queryFn: async () => {
-      const [
-        { data: types },
-        { data: publishers },
-        { data: languages },
-        { data: eras },
-        { data: formats },
-        { data: audiences },
-        { data: years },
-        { data: authors },
-        { data: series },
-        { data: genres }
-      ] = await Promise.all([
-        supabase.from("books").select("type").not("type", "is", null).order("type", { ascending: true }),
-        supabase.from("books").select("publisher").not("publisher", "is", null).order("publisher", { ascending: true }),
-        supabase.from("books").select("language").not("language", "is", null).order("language", { ascending: true }),
-        supabase.from("books").select("era").not("era", "is", null).order("era", { ascending: true }),
-        supabase.from("books").select("format").not("format", "is", null).order("format", { ascending: true }),
-        supabase.from("books").select("audience").not("audience", "is", null).order("audience", { ascending: true }),
-        supabase.from("books").select("year").not("year", "is", null).order("year", { ascending: false }),
-        supabase.from("authors").select("id, name").order("name", { ascending: true }),
-        supabase.from("series").select("id, name").order("name", { ascending: true }),
-        supabase.from("genres").select("id, name").order("name", { ascending: true })
-      ])
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const { data: types } = await supabase.from("books").select("type").not("type", "is", null).order("type", { ascending: true })
+        const { data: publishers } = await supabase.from("books").select("publisher").not("publisher", "is", null).order("publisher", { ascending: true })
+        const { data: languages } = await supabase.from("books").select("language").not("language", "is", null).order("language", { ascending: true })
+        const { data: eras } = await supabase.from("books").select("era").not("era", "is", null).order("era", { ascending: true })
+        const { data: formats } = await supabase.from("books").select("format").not("format", "is", null).order("format", { ascending: true })
+        const { data: audiences } = await supabase.from("books").select("audience").not("audience", "is", null).order("audience", { ascending: true })
+        const { data: years } = await supabase.from("books").select("year").not("year", "is", null).order("year", { ascending: false })
+        const { data: authors } = await supabase.from("authors").select("id, name").order("name", { ascending: true })
+        const { data: series } = await supabase.from("series").select("id, name").order("name", { ascending: true })
+        const { data: genres } = await supabase.from("genres").select("id, name").order("name", { ascending: true })
 
-      return {
-        type: [...new Set(types?.map(t => t.type))].map(t => ({ value: t, label: t })) || [],
-        publisher: [...new Set(publishers?.map(p => p.publisher))].map(p => ({ value: p, label: p })) || [],
-        language: [...new Set(languages?.map(l => l.language))].map(l => ({ value: l, label: l })) || [],
-        era: [...new Set(eras?.map(e => e.era))].map(e => ({ value: e, label: e })) || [],
-        format: [...new Set(formats?.map(f => f.format))].map(f => ({ value: f, label: f })) || [],
-        audience: [...new Set(audiences?.map(a => a.audience))].map(a => ({ value: a, label: a })) || [],
-        year: [...new Set(years?.map(y => y.year?.toString()))].map(y => ({ value: y, label: y })) || [],
-        author: authors?.map(a => ({ value: a.id.toString(), label: a.name, id: a.id })) || [],
-        series: series?.map(s => ({ value: s.id.toString(), label: s.name, id: s.id })) || [],
-        genre: genres?.map(g => ({ value: g.id.toString(), label: g.name, id: g.id })) || [],
-        reading_difficulty: [
-          { value: "Light", label: "Light" },
-          { value: "Medium", label: "Medium" },
-          { value: "Dense", label: "Dense" }
-        ],
+        setOptions({
+          type: [...new Set(types?.map(t => t.type))].map(t => ({ value: t, label: t })) || [],
+          publisher: [...new Set(publishers?.map(p => p.publisher))].map(p => ({ value: p, label: p })) || [],
+          language: [...new Set(languages?.map(l => l.language))].map(l => ({ value: l, label: l })) || [],
+          era: [...new Set(eras?.map(e => e.era))].map(e => ({ value: e, label: e })) || [],
+          format: [...new Set(formats?.map(f => f.format))].map(f => ({ value: f, label: f })) || [],
+          audience: [...new Set(audiences?.map(a => a.audience))].map(a => ({ value: a, label: a })) || [],
+          year: [...new Set(years?.map(y => y.year?.toString()))].map(y => ({ value: y, label: y })) || [],
+          author: authors?.map(a => ({ value: a.id.toString(), label: a.name, id: a.id })) || [],
+          series: series?.map(s => ({ value: s.id.toString(), label: s.name, id: s.id })) || [],
+          genre: genres?.map(g => ({ value: g.id.toString(), label: g.name, id: g.id })) || [],
+          reading_difficulty: [
+            { value: "Light", label: "Light" },
+            { value: "Medium", label: "Medium" },
+            { value: "Dense", label: "Dense" }
+          ],
+        })
+      } catch (error) {
+        console.error("Error fetching options:", error)
       }
     }
-  })
+
+    fetchOptions()
+  }, [])
 
   const handleSave = async (field: string, newValue: any) => {
     if (!book) return
@@ -147,12 +136,16 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, updateBoo
         dbValue = newValue ? new Date(newValue).toISOString() : null
       }
 
-      updateBookMutation.mutate({
-        id: book.id,
-        updates: { [dbField]: dbValue }
-      })
+      const { error } = await supabase
+        .from("books")
+        .update({ [dbField]: dbValue })
+        .eq("id", book.id)
 
+      if (error) throw error
+
+      toast.success(`Campo ${field} actualizado`)
       setEditingField(null)
+      refreshData?.()
     } catch (error) {
       console.error("Error updating field:", error)
       toast.error(`No se pudo actualizar el campo ${field}`)
@@ -162,13 +155,38 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, updateBoo
   const handleSaveGenres = async (genreIds: string[]) => {
     if (!book) return
     
-    const numericGenreIds = genreIds.map(id => parseInt(id)).filter(id => !isNaN(id))
-    updateBookGenresMutation.mutate({
-      bookId: book.id,
-      genreIds: numericGenreIds
-    })
-    
-    setEditingField(null)
+    try {
+      const numericGenreIds = genreIds.map(id => parseInt(id)).filter(id => !isNaN(id))
+      
+      // Eliminar relaciones existentes
+      const { error: deleteError } = await supabase
+        .from("book_genre")
+        .delete()
+        .eq("book_id", book.id)
+
+      if (deleteError) throw deleteError
+
+      // Crear nuevas relaciones si hay géneros válidos
+      if (numericGenreIds.length > 0) {
+        const genreInserts = numericGenreIds.map(genreId => ({
+          book_id: book.id,
+          genre_id: genreId
+        }))
+
+        const { error: insertError } = await supabase
+          .from("book_genre")
+          .insert(genreInserts)
+
+        if (insertError) throw insertError
+      }
+
+      toast.success("Géneros actualizados correctamente")
+      setEditingField(null)
+      refreshData?.()
+    } catch (error) {
+      console.error("Error updating genres:", error)
+      toast.error("No se pudieron actualizar los géneros")
+    }
   }
 
   const getValueForField = (field: string) => {
@@ -207,8 +225,8 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, updateBoo
       .from("authors")
       .select("id, name")
       .order("name", { ascending: true })
-    queryClient.setQueryData(['modal-options'], (old: any) => ({
-      ...old,
+    setOptions(prev => ({
+      ...prev,
       author: authors?.map(a => ({ value: a.id.toString(), label: a.name, id: a.id })) || []
     }))
   }
@@ -218,8 +236,8 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, updateBoo
       .from("series")
       .select("id, name")
       .order("name", { ascending: true })
-    queryClient.setQueryData(['modal-options'], (old: any) => ({
-      ...old,
+    setOptions(prev => ({
+      ...prev,
       series: series?.map(s => ({ value: s.id.toString(), label: s.name, id: s.id })) || []
     }))
   }
@@ -229,8 +247,8 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, updateBoo
       .from("genres")
       .select("id, name")
       .order("name", { ascending: true })
-    queryClient.setQueryData(['modal-options'], (old: any) => ({
-      ...old,
+    setOptions(prev => ({
+      ...prev,
       genre: genres?.map(g => ({ value: g.id.toString(), label: g.name, id: g.id })) || []
     }))
   }
@@ -330,346 +348,344 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, updateBoo
               onSave={(newValue) => handleSave("summary", newValue)}
               onCancel={() => setEditingField(null)}
             />
-          </div>
         </div>
-      )
-    }
-
-    return (
-      <div 
-        className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
-        onClick={() => setEditingField({ section: "opinion", field: "summary" })}
-      >
-        <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
-          Resumen
-        </Label>
-        <p className="text-sm mt-1 italic text-purple-700">
-          {book.summary ? `"${book.summary}"` : "No hay resumen disponible"}
-        </p>
       </div>
     )
   }
 
-  const renderMainCharactersField = () => {
-    const isEditing = editingField?.section === "characters" && editingField?.field === "main_characters"
-    
-    if (isEditing) {
-      return (
-        <div className="bg-white/60 rounded-lg p-3">
-          <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
-            Personajes Principales
-          </Label>
-          <div className="mt-1">
-            <EditableCell
-              book={book!}
-              columnId="main_characters"
-              value={book.main_characters}
-              options={[]}
-              onSave={(newValue) => handleSave("main_characters", newValue)}
-              onCancel={() => setEditingField(null)}
-            />
-          </div>
-        </div>
-      )
-    }
+  return (
+    <div 
+      className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
+      onClick={() => setEditingField({ section: "opinion", field: "summary" })}
+    >
+      <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+        Resumen
+      </Label>
+      <p className="text-sm mt-1 italic text-purple-700">
+        {book.summary ? `"${book.summary}"` : "No hay resumen disponible"}
+      </p>
+    </div>
+  )
+}
 
+const renderMainCharactersField = () => {
+  const isEditing = editingField?.section === "characters" && editingField?.field === "main_characters"
+  
+  if (isEditing) {
     return (
-      <div 
-        className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
-        onClick={() => setEditingField({ section: "characters", field: "main_characters" })}
-      >
+      <div className="bg-white/60 rounded-lg p-3">
         <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
           Personajes Principales
         </Label>
-        {book.main_characters ? (
-          <ul className="space-y-3 mt-1">
-            {book.main_characters.split(",").map((character, index) => (
-              <li key={index} className="flex items-center gap-3">
-                <svg className="h-2.5 w-2.5 flex-shrink-0" viewBox="0 0 10 10" fill="#a855f7">
-                  <circle cx="5" cy="5" r="5" />
-                </svg>
-                <span className="text-gray-800 font-medium capitalize">{character.trim()}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm mt-1 text-gray-400 italic">No hay información de personajes principales</p>
-        )}
+        <div className="mt-1">
+          <EditableCell
+            book={book!}
+            columnId="main_characters"
+            value={book.main_characters}
+            options={[]}
+            onSave={(newValue) => handleSave("main_characters", newValue)}
+            onCancel={() => setEditingField(null)}
+          />
+        </div>
       </div>
     )
   }
 
-  const renderFavoriteCharacterField = () => {
-    const isEditing = editingField?.section === "characters" && editingField?.field === "favorite_character"
-    
-    if (isEditing) {
-      return (
-        <div className="bg-white/60 rounded-lg p-3">
-          <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
-            Personaje Favorito
-          </Label>
-          <div className="mt-1">
-            <EditableCell
-              book={book!}
-              columnId="favorite_character"
-              value={book.favorite_character}
-              options={[]}
-              onSave={(newValue) => handleSave("favorite_character", newValue)}
-              onCancel={() => setEditingField(null)}
-            />
-          </div>
-        </div>
-      )
-    }
+  return (
+    <div 
+      className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
+      onClick={() => setEditingField({ section: "characters", field: "main_characters" })}
+    >
+      <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+        Personajes Principales
+      </Label>
+      {book.main_characters ? (
+        <ul className="space-y-3 mt-1">
+          {book.main_characters.split(",").map((character, index) => (
+            <li key={index} className="flex items-center gap-3">
+              <svg className="h-2.5 w-2.5 flex-shrink-0" viewBox="0 0 10 10" fill="#a855f7">
+                <circle cx="5" cy="5" r="5" />
+              </svg>
+              <span className="text-gray-800 font-medium capitalize">{character.trim()}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm mt-1 text-gray-400 italic">No hay información de personajes principales</p>
+      )}
+    </div>
+  )
+}
 
+const renderFavoriteCharacterField = () => {
+  const isEditing = editingField?.section === "characters" && editingField?.field === "favorite_character"
+  
+  if (isEditing) {
     return (
-      <div 
-        className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
-        onClick={() => setEditingField({ section: "characters", field: "favorite_character" })}
-      >
+      <div className="bg-white/60 rounded-lg p-3">
         <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
           Personaje Favorito
         </Label>
-        <p className="text-sm mt-1 text-gray-700">
-          {book.favorite_character || "No hay personaje favorito especificado"}
-        </p>
+        <div className="mt-1">
+          <EditableCell
+            book={book!}
+            columnId="favorite_character"
+            value={book.favorite_character}
+            options={[]}
+            onSave={(newValue) => handleSave("favorite_character", newValue)}
+            onCancel={() => setEditingField(null)}
+          />
+        </div>
       </div>
     )
   }
 
-  const renderSeriesField = () => {
-    const isEditing = editingField?.section === "info" && editingField?.field === "series"
-    const seriesName = book.series?.name || ""
-    
-    if (isEditing) {
-      return (
-        <div className="bg-white/60 rounded-lg p-3">
-          <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
-            Universo
-          </Label>
-          <div className="mt-1">
-            <EditableCell
-              book={book!}
-              columnId="universe"
-              value={book.series?.id?.toString() || ""}
-              options={options?.series || []}
-              onSave={(newValue) => handleSave("series", newValue)}
-              onCancel={() => setEditingField(null)}
-              refreshOptions={refreshSeries}
-            />
-          </div>
-        </div>
-      )
-    }
+  return (
+    <div 
+      className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
+      onClick={() => setEditingField({ section: "characters", field: "favorite_character" })}
+    >
+      <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+        Personaje Favorito
+      </Label>
+      <p className="text-sm mt-1 text-gray-700">
+        {book.favorite_character || "No hay personaje favorito especificado"}
+      </p>
+    </div>
+  )
+}
 
+const renderSeriesField = () => {
+  const isEditing = editingField?.section === "info" && editingField?.field === "series"
+  const seriesName = book.series?.name || ""
+  
+  if (isEditing) {
     return (
-      <div 
-        className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
-        onClick={() => setEditingField({ section: "info", field: "series" })}
-      >
+      <div className="bg-white/60 rounded-lg p-3">
         <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
           Universo
         </Label>
-        <p className="text-sm mt-1 font-semibold text-purple-900">
-          {seriesName}
-        </p>
+        <div className="mt-1">
+          <EditableCell
+            book={book!}
+            columnId="universe"
+            value={book.series?.id?.toString() || ""}
+            options={options.series || []}
+            onSave={(newValue) => handleSave("series", newValue)}
+            onCancel={() => setEditingField(null)}
+          />
+        </div>
       </div>
     )
   }
 
-  const renderReadingDifficultyField = () => {
-    const isEditing = editingField?.section === "details" && editingField?.field === "reading_difficulty"
-    
-    if (isEditing) {
-      return (
-        <div className="bg-white/60 rounded-lg p-3">
-          <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">
-            Densidad de Lectura
-            Densidad de Lectura
-          </Label>
-          <div className="mt-1">
-            <EditableCell
-              book={book!}
-              columnId="readingDensity"
-              value={book.reading_difficulty || ""}
-              options={options?.reading_difficulty || []}
-              onSave={(newValue) => handleSave("reading_difficulty", newValue)}
-              onCancel={() => setEditingField(null)}
-            />
-          </div>
-        </div>
-      )
-    }
+  return (
+    <div 
+      className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
+      onClick={() => setEditingField({ section: "info", field: "series" })}
+    >
+      <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+        Universo
+      </Label>
+      <p className="text-sm mt-1 font-semibold text-purple-900">
+        {seriesName}
+      </p>
+    </div>
+  )
+}
 
+const renderReadingDifficultyField = () => {
+  const isEditing = editingField?.section === "details" && editingField?.field === "reading_difficulty"
+  
+  if (isEditing) {
     return (
-      <div 
-        className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
-        onClick={() => setEditingField({ section: "details", field: "reading_difficulty" })}
-      >
+      <div className="bg-white/60 rounded-lg p-3">
         <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">
           Densidad de Lectura
         </Label>
-        <p className="text-sm mt-1 font-semibold text-blue-900">
-          {book.reading_difficulty || ""}
-        </p>
+        <div className="mt-1">
+          <EditableCell
+            book={book!}
+            columnId="readingDensity"
+            value={book.reading_difficulty || ""}
+            options={options.reading_difficulty || []}
+            onSave={(newValue) => handleSave("reading_difficulty", newValue)}
+            onCancel={() => setEditingField(null)}
+          />
+        </div>
       </div>
     )
   }
 
-  const renderFavoriteField = () => {
-    const isEditing = editingField?.section === "details" && editingField?.field === "favorite"
-    
-    if (isEditing) {
-      return (
-        <div className="bg-white/60 rounded-lg p-3">
-          <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">
-            Favorito
-          </Label>
-          <div className="mt-1">
-            <EditableCell
-              book={book!}
-              columnId="favorite"
-              value={book.favorite}
-              options={[]}
-              onSave={(newValue) => {
-                handleSave("favorite", newValue)
-                setEditingField(null)
-              }}
-              onCancel={() => setEditingField(null)}
-            />
-          </div>
-        </div>
-      )
-    }
+  return (
+    <div 
+      className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
+      onClick={() => setEditingField({ section: "details", field: "reading_difficulty" })}
+    >
+      <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">
+        Densidad de Lectura
+      </Label>
+      <p className="text-sm mt-1 font-semibold text-blue-900">
+        {book.reading_difficulty || ""}
+      </p>
+    </div>
+  )
+}
 
+const renderFavoriteField = () => {
+  const isEditing = editingField?.section === "details" && editingField?.field === "favorite"
+  
+  if (isEditing) {
     return (
-      <div 
-        className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
-        onClick={() => setEditingField({ section: "details", field: "favorite" })}
-      >
+      <div className="bg-white/60 rounded-lg p-3">
         <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">
           Favorito
         </Label>
-        <div className="flex items-center gap-2 mt-1">
-          {book.favorite ? (
-            <Badge className="bg-pink-100 text-pink-800 border-pink-300 font-semibold">
-              ❤️ Favorito
-            </Badge>
-          ) : (
-            <p></p>
-          )}
+        <div className="mt-1">
+          <EditableCell
+            book={book!}
+            columnId="favorite"
+            value={book.favorite}
+            options={[]}
+            onSave={(newValue) => {
+              handleSave("favorite", newValue)
+              setEditingField(null)
+            }}
+            onCancel={() => setEditingField(null)}
+          />
         </div>
       </div>
     )
   }
 
-  const renderDateField = (field: "start_date" | "end_date", label: string, icon: string) => {
-    const isEditing = editingField?.section === "dates" && editingField?.field === field
-    const dateValue = field === "start_date" ? book.start_date : book.end_date
+  return (
+    <div 
+      className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
+      onClick={() => setEditingField({ section: "details", field: "favorite" })}
+    >
+      <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">
+        Favorito
+      </Label>
+      <div className="flex items-center gap-2 mt-1">
+        {book.favorite ? (
+          <Badge className="bg-pink-100 text-pink-800 border-pink-300 font-semibold">
+            ❤️ Favorito
+          </Badge>
+        ) : (
+          <p></p>
+        )}
+      </div>
+    </div>
+  )
+}
 
-    if (isEditing) {
-      return (
-        <div className="bg-white/60 rounded-lg p-3">
-          <Label className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">
-            {icon} {label}
-          </Label>
-          <div className="mt-1">
-            <EditableCell
-              book={book!}
-              columnId={field === "start_date" ? "dateStarted" : "dateRead"}
-              value={dateValue}
-              options={[]}
-              onSave={(newValue) => handleSave(field, newValue)}
-              onCancel={() => setEditingField(null)}
-            />
-          </div>
-        </div>
-      )
-    }
+const renderDateField = (field: "start_date" | "end_date", label: string, icon: string) => {
+  const isEditing = editingField?.section === "dates" && editingField?.field === field
+  const dateValue = field === "start_date" ? book.start_date : book.end_date
 
+  if (isEditing) {
     return (
-      <div 
-        className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
-        onClick={() => setEditingField({ section: "dates", field })}
-      >
+      <div className="bg-white/60 rounded-lg p-3">
         <Label className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">
           {icon} {label}
         </Label>
-        <p className="text-sm mt-1 font-bold text-emerald-900">
-          {dateValue ? new Date(dateValue).toLocaleDateString("es-ES") : ""}
-        </p>
-      </div>
-    )
-  }
-
-  const renderTitleField = () => {
-    const isEditing = editingField?.section === "header" && editingField?.field === "title"
-    
-    if (isEditing) {
-      return (
-        <div className="text-center">
+        <div className="mt-1">
           <EditableCell
             book={book!}
-            columnId="title"
-            value={book.title}
+            columnId={field === "start_date" ? "dateStarted" : "dateRead"}
+            value={dateValue}
             options={[]}
-            onSave={(newValue) => handleSave("title", newValue)}
+            onSave={(newValue) => handleSave(field, newValue)}
             onCancel={() => setEditingField(null)}
           />
         </div>
-      )
-    }
-
-    return (
-      <div 
-        className="cursor-pointer group relative text-center"
-        onClick={() => setEditingField({ section: "header", field: "title" })}
-      >
-        <h3 className="text-lg font-bold text-purple-800">{book.title}</h3>
       </div>
     )
   }
 
-  const renderReviewField = () => {
-    const isEditing = editingField?.section === "left" && editingField?.field === "review"
-    const hasReview = !!book.review;
-    
-    if (isEditing) {
-      return (
+  return (
+    <div 
+      className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
+      onClick={() => setEditingField({ section: "dates", field })}
+    >
+      <Label className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">
+        {icon} {label}
+      </Label>
+      <p className="text-sm mt-1 font-bold text-emerald-900">
+        {dateValue ? new Date(dateValue).toLocaleDateString("es-ES") : ""}
+      </p>
+    </div>
+  )
+}
+
+const renderTitleField = () => {
+  const isEditing = editingField?.section === "header" && editingField?.field === "title"
+  
+  if (isEditing) {
+    return (
+      <div className="text-center">
+        <EditableCell
+          book={book!}
+          columnId="title"
+          value={book.title}
+          options={[]}
+          onSave={(newValue) => handleSave("title", newValue)}
+          onCancel={() => setEditingField(null)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div 
+      className="cursor-pointer group relative text-center"
+      onClick={() => setEditingField({ section: "header", field: "title" })}
+    >
+      <h3 className="text-lg font-bold text-purple-800">{book.title}</h3>
+    </div>
+  )
+}
+
+const renderReviewField = () => {
+  const isEditing = editingField?.section === "left" && editingField?.field === "review"
+  const hasReview = !!book.review;
+  
+  if (isEditing) {
+    return (
+      <div className="bg-purple-50 p-3 rounded-lg">
+        <EditableCell
+          book={book!}
+          columnId="review"
+          value={book.review}
+          options={[]}
+          onSave={(newValue) => handleSave("review", newValue)}
+          onCancel={() => setEditingField(null)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div 
+      className="cursor-pointer group relative min-h-[60px] rounded-lg border-2 border-dashed border-transparent group-hover:border-purple-200 transition-all"
+      onClick={() => setEditingField({ section: "left", field: "review" })}
+    >
+      {hasReview ? (
         <div className="bg-purple-50 p-3 rounded-lg">
-          <EditableCell
-            book={book!}
-            columnId="review"
-            value={book.review}
-            options={[]}
-            onSave={(newValue) => handleSave("review", newValue)}
-            onCancel={() => setEditingField(null)}
-          />
+          <p className="text-sm italic text-purple-700">"{book.review}"</p>
         </div>
-      )
-    }
-
-    return (
-      <div 
-        className="cursor-pointer group relative min-h-[60px] rounded-lg border-2 border-dashed border-transparent group-hover:border-purple-200 transition-all"
-        onClick={() => setEditingField({ section: "left", field: "review" })}
-      >
-        {hasReview ? (
-          <div className="bg-purple-50 p-3 rounded-lg">
-            <p className="text-sm italic text-purple-700">"{book.review}"</p>
+      ) : (
+        <div className="flex items-center justify-center h-full opacity-60 group-hover:opacity-100 transition-opacity">
+          <div className="text-center text-gray-400 group-hover:text-purple-500 transition-colors">
+            <svg className="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
           </div>
-        ) : (
-          <div className="flex items-center justify-center h-full opacity-60 group-hover:opacity-100 transition-opacity">
-            <div className="text-center text-gray-400 group-hover:text-purple-500 transition-colors">
-              <svg className="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
+        </div>
+      )}
+    </div>
+  )
+}
 
 const renderRatingField = () => {
   const isEditing = editingField?.section === "left" && editingField?.field === "rating"

@@ -20,7 +20,6 @@ import { Database, BookOpen, Users, BarChart3, Quote, Trophy, BookMarked, Plus }
 import Link from "next/link"
 import "./globals.css"
 import { Toaster } from 'react-hot-toast';
-import { Providers } from './providers'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -83,7 +82,6 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        <Providers>
           <Toaster position="top-right" />
           <ViewModeProvider>
             {/* Desktop Header Menu - visible on large screens */}
@@ -172,7 +170,6 @@ export default function RootLayout({
               </SidebarProvider>
             </div>
           </ViewModeProvider>
-        </Providers>
       </body>
     </html>
   )
