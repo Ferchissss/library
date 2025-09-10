@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo } from "react"
 import { Check, ChevronsUpDown, Plus, X, Trash2 } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "@/hooks/use-toast"
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog"
+import { AVAILABLE_COLORS, getConsistentColorIndex } from "@/lib/colors";
 
 interface MultiSelectProps {
   options: { value: string; label: string; id?: number }[]
@@ -22,19 +23,10 @@ interface MultiSelectProps {
   tableName?: "authors" | "series" | "genres"
   refreshOptions?: () => Promise<void>
   returnId?: boolean
+  columnId?: string // Nueva prop para identificar la columna
 }
 
-const colorClasses = [
-  "bg-[#efdfd7] text-amber-800 border border-amber-300",
-  "bg-[#f7dcc9] text-orange-800 border border-orange-300",
-  "bg-[#f1dfaf] text-yellow-800 border border-yellow-300",
-  "bg-[#dbecdd] text-green-800 border border-green-300",
-  "bg-[#d3e7f2] text-blue-800 border border-blue-300",
-  "bg-[#e7ddef] text-purple-800 border border-purple-300",
-  "bg-[#f7dfea] text-pink-800 border border-pink-300",
-  "bg-[#fbddd9] text-red-800 border border-red-300",
-  "bg-[#e6e4e0] text-gray-700 border border-gray-300",
-]
+const colorClasses = AVAILABLE_COLORS;
 
 export function MultiSelect({
   options,
@@ -47,16 +39,40 @@ export function MultiSelect({
   tableName,
   refreshOptions,
   returnId = false,
+  columnId = "multiselect", // Valor por defecto
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [localNewItems, setLocalNewItems] = useState<{ value: string; label: string; id?: number }[]>([])
 
-  const getOptionIndex = (value: string) => {
-    return options.findIndex((opt) => (returnId ? opt.id?.toString() === value : opt.value === value))
-  }
+  // Función para verificar si existe una coincidencia exacta (case insensitive)
+  const hasExactMatch = (searchValue: string) => {
+    const normalizedSearch = searchValue.trim().toLowerCase();
+    return options.some(option => 
+      option.label.toLowerCase() === normalizedSearch
+    );
+  };
+
+  // Usar useMemo para filtrar las opciones de manera eficiente
+  const filteredOptions = useMemo(() => {
+    return options.filter(option => 
+      !selected.includes(returnId ? option.id?.toString() || "" : option.value) || singleSelect
+    );
+  }, [options, selected, singleSelect, returnId]);
+
+  // Función para obtener estilos de color consistentes
+  const getColorStyle = (label: string) => {
+    const index = getConsistentColorIndex(label, columnId, colorClasses.length);
+    const color = colorClasses[index];
+    return {
+      backgroundColor: color.bg,
+      borderColor: color.border,
+      color: color.text.replace('text-', '#')
+    };
+  };
 
   const handleSelect = (value: string, id?: number) => {
     if (selected.includes(value)) {
@@ -71,7 +87,7 @@ export function MultiSelect({
     }
     setInputValue("")
   }
-
+  
   const handleCreate = async () => {
     if (!inputValue.trim()) return
 
@@ -99,7 +115,7 @@ export function MultiSelect({
             label,
             id: data[0].id,
           }
-
+          setLocalNewItems(prev => [...prev, newItem])
           if (refreshOptions) {
             await refreshOptions()
           }
@@ -113,7 +129,7 @@ export function MultiSelect({
 
           toast({
             title: "✅ Creado exitosamente",
-            description: `El ${tableName.slice(0, -1)} se ha añadido a la base de datos.`,
+            description: `El ${tableName.slice(0, -1)} se ha añadido to the database.`,
           })
         }
       } catch (error) {
@@ -141,14 +157,11 @@ export function MultiSelect({
     if (!itemToDelete || !tableName) return
 
     try {
-      // CORRECCIÓN: Buscar por ID si returnId es true, por nombre si es false
       let query = supabase.from(tableName).select("id")
       
       if (returnId) {
-        // Si estamos usando IDs, buscar por ID
         query = query.eq("id", parseInt(itemToDelete))
       } else {
-        // Si estamos usando nombres, buscar por nombre
         query = query.eq("name", itemToDelete)
       }
 
@@ -164,15 +177,12 @@ export function MultiSelect({
         return
       }
 
-      // Usar el primer resultado (debería ser único)
       const itemId = existingItems[0].id
-
       const { error: deleteError } = await supabase.from(tableName).delete().eq("id", itemId)
 
       if (deleteError) throw deleteError
 
       if (refreshOptions) await refreshOptions()
-
       onChange(selected.filter((item) => item !== itemToDelete))
 
       toast({
@@ -199,6 +209,11 @@ export function MultiSelect({
     }
   }
 
+  // Función auxiliar para verificar si una opción está seleccionada
+  const isOptionSelected = (optionValue: string) => {
+    return selected.includes(optionValue);
+  }
+
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
@@ -216,17 +231,21 @@ export function MultiSelect({
               {selected.length > 0 ? (
                 selected.map((value) => {
                   const option = options.find((opt) => (returnId ? opt.id?.toString() === value : opt.value === value))
-                  const optionIndex = getOptionIndex(value)
+                  const label = option?.label || value;
+                  const colorStyle = getColorStyle(label);
+                  
                   return (
                     <div
                       key={value}
-                      className={cn(
-                        "inline-flex items-center rounded-md px-2 py-0 text-xs font-medium h-4 leading-none",
-                        colorClasses[optionIndex % colorClasses.length],
-                        "transition-colors",
-                      )}
+                      className="inline-flex items-center rounded-md px-2 py-0 text-xs font-medium h-4 leading-none transition-colors border"
+                      style={colorStyle}
                     >
-                      <span className="truncate max-w-40">{option?.label || value}</span>
+                      <span className="truncate max-w-40">
+                        {options.find(opt => opt.id?.toString() === value)?.label || 
+                        options.find(opt => opt.value === value)?.label ||
+                        localNewItems.find(item => item.id?.toString() === value)?.label ||
+                        value}
+                      </span>                      
                       <div
                         role="button"
                         tabIndex={0}
@@ -241,6 +260,7 @@ export function MultiSelect({
                           }
                         }}
                         className="ml-1 rounded-full outline-none hover:bg-black/10 p-0.5 flex items-center justify-center"
+                        style={{ color: colorStyle.color }}
                       >
                         <X className="h-1.5 w-1.5" />
                       </div>
@@ -255,7 +275,10 @@ export function MultiSelect({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0 shadow-xl border-0 rounded-xl bg-white/95 backdrop-blur-sm">
-          <Command className="rounded-xl">
+          <Command className="rounded-xl" filter={(value, search) => {
+            if (value.includes("create-option")) return 1;
+            return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+          }}>
             <CommandInput
               ref={inputRef}
               placeholder=""
@@ -266,37 +289,40 @@ export function MultiSelect({
             />
             <CommandList className="max-h-64">
               <CommandEmpty>
-                {creatable && inputValue.trim() ? (
-                  <button
-                    type="button"
-                    onClick={handleCreate}
-                    className="flex w-full items-center px-4 py-1 text-sm text-primary hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 transition-all duration-200 hover:scale-[1.02] rounded-lg mx-2 my-1 h-6"
-                  >
-                    <Plus className="mr-3 h-3 w-3" />
-                    Crear "{inputValue.trim()}"
-                  </button>
-                ) : (
-                  <div className="py-6 text-center text-sm text-muted-foreground">
-                    No se encontraron resultados
-                  </div>
-                )}
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  No se encontraron resultados
+                </div>
               </CommandEmpty>
               <CommandGroup className="p-2">
-                {options
-                  .filter((opt) => !selected.includes(returnId ? opt.id?.toString() || "" : opt.value) || singleSelect)
-                  .map((option, index) => (
+                {creatable && inputValue.trim() && !hasExactMatch(inputValue) && (
+                  <CommandItem
+                    key="create-option"
+                    value={`create-option-${inputValue}`}
+                    onSelect={handleCreate}
+                    className="cursor-pointer rounded-lg px-4 py-0.5 mb-1 transition-all duration-200 hover:scale-[1.02] hover:shadow-md bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100"
+                  >
+                    <div className="flex items-center">
+                      <Plus className="mr-3 h-3 w-3 text-primary" />
+                      <span className="font-medium text-primary">Crear "{inputValue.trim()}"</span>
+                    </div>
+                  </CommandItem>
+                )}
+                
+                {filteredOptions.map((option) => {
+                  const optionValue = returnId ? option.id?.toString() || option.value : option.value;
+                  const isSelected = isOptionSelected(optionValue);
+                  const colorStyle = getColorStyle(option.label);
+                  
+                  return (
                     <CommandItem
                       key={option.value}
-                      onSelect={() =>
-                        handleSelect(returnId ? option.id?.toString() || option.value : option.value, option.id)
-                      }
+                      value={option.label}
+                      onSelect={() => handleSelect(optionValue, option.id)}
                       className={cn(
-                        "cursor-pointer rounded-lg px-4 py-0.5 mb-1 transition-all duration-200 hover:scale-[1.02] hover:shadow-md",
-                        colorClasses[index % colorClasses.length],
-                        "hover:brightness-95 relative",
-                        selected.includes(returnId ? option.id?.toString() || "" : option.value) &&
-                          "ring-2 ring-white ring-opacity-60",
+                        "cursor-pointer rounded-lg px-4 py-0.5 mb-1 transition-all duration-200 hover:scale-[1.02] hover:shadow-md relative hover:brightness-95 border",
+                        isSelected && "ring-2 ring-white ring-opacity-60",
                       )}
+                      style={colorStyle}
                     >
                       <div className="flex items-center justify-between w-full">
                         <span className="font-medium">{option.label}</span>
@@ -304,10 +330,9 @@ export function MultiSelect({
                           <Check
                             className={cn(
                               "h-4 w-4 transition-all duration-200",
-                              selected.includes(returnId ? option.id?.toString() || "" : option.value)
-                                ? "opacity-100 scale-110"
-                                : "opacity-0 scale-75",
+                              isSelected ? "opacity-100 scale-110" : "opacity-0 scale-75",
                             )}
+                            style={{ color: colorStyle.color }}
                           />
                           {tableName && (
                             <div
@@ -315,17 +340,18 @@ export function MultiSelect({
                               tabIndex={0}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setItemToDelete(returnId ? option.id?.toString() || option.value : option.value)
+                                setItemToDelete(optionValue)
                                 setShowDeleteDialog(true)
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
                                   e.stopPropagation()
-                                  setItemToDelete(returnId ? option.id?.toString() || option.value : option.value)
+                                  setItemToDelete(optionValue)
                                   setShowDeleteDialog(true)
                                 }
                               }}
-                              className="rounded-full outline-none hover:bg-red-500/20 p-1 text-red-500 transition-colors opacity-70 hover:opacity-100"
+                              className="rounded-full outline-none hover:bg-red-500/20 p-1 transition-colors opacity-70 hover:opacity-100"
+                              style={{ color: colorStyle.color }}
                             >
                               <Trash2 className="h-3 w-3" />
                             </div>
@@ -333,7 +359,8 @@ export function MultiSelect({
                         </div>
                       </div>
                     </CommandItem>
-                  ))}
+                  )
+                })}
               </CommandGroup>
             </CommandList>
           </Command>

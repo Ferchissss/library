@@ -1,7 +1,7 @@
 "use client"
-
 import React, { useState, useEffect, useRef } from "react"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { MultiSelect } from "@/components/MultiSelect"
 import { supabase } from '@/lib/supabaseClient'
 import { toast } from "sonner"
@@ -9,9 +9,10 @@ import type { Book } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, X } from "lucide-react"
+import { CalendarIcon, X, ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
+import { AVAILABLE_COLORS, getConsistentColorIndex } from "@/lib/colors";
 
 interface EditableCellProps {
   book: Book
@@ -22,6 +23,27 @@ interface EditableCellProps {
   onCancel: () => void
   refreshOptions?: () => Promise<void>
 }
+
+const availableColors = AVAILABLE_COLORS;
+
+// Función para obtener estilos de color consistentes
+const getBadgeStyle = (value: string, columnId: string) => {
+  if (!value) {
+    return {
+      backgroundColor: availableColors[0].bg,
+      borderColor: availableColors[0].border.replace('border-', '#'),
+      color: availableColors[0].text.replace('text-', '#')
+    };
+  }
+  
+  const colorIndex = getConsistentColorIndex(value, columnId, availableColors.length);
+  const colorClass = availableColors[colorIndex];
+  return {
+    backgroundColor: colorClass.bg,
+    borderColor: colorClass.border.replace('border-', '#'),
+    color: colorClass.text.replace('text-', '#')
+  };
+};
 
 export const EditableCell: React.FC<EditableCellProps> = ({
   book,
@@ -34,12 +56,16 @@ export const EditableCell: React.FC<EditableCellProps> = ({
 }) => {
   const [editValue, setEditValue] = useState<any>(value)
   const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const multiSelectRef = useRef<any>(null)
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 
   useEffect(() => {
-    if (inputRef.current && !["dateStarted", "dateRead", "genre"].includes(columnId)) {
+    if (inputRef.current && !["dateStarted", "dateRead", "genre", "review", "image_url"].includes(columnId)) {
       inputRef.current.focus()
+    }
+    if (textareaRef.current && columnId === "review") {
+      textareaRef.current.focus()
     }
     if (multiSelectRef.current && ["genre", "type", "publisher", "language", "era", "format", "audience", "readingDensity", "author", "universe"].includes(columnId)) {
       multiSelectRef.current.focus()
@@ -68,7 +94,12 @@ export const EditableCell: React.FC<EditableCellProps> = ({
         year: "year",
         author: "author_id",
         universe: "series_id",
-        genre: "genre"
+        genre: "genre",
+        review: "review",
+        image_url: "image_url",
+        summary: "summary",
+        main_characters: "main_characters", 
+        favorite_character: "favorite_character",
       }
 
       const dbField = fieldMap[columnId]
@@ -187,7 +218,8 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
       handleSave()
     }
     if (e.key === "Escape") {
@@ -239,12 +271,9 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   const getSelectedGenreValues = () => {
     if (columnId !== "genre") return editValue ? [editValue] : []
     
-    // Para géneros, necesitamos convertir los IDs a nombres para mostrar
+    // Para géneros, necesitamos convertir los IDs a strings para el MultiSelect
     if (Array.isArray(editValue)) {
-      return editValue.map(id => {
-        const option = options.find(opt => opt.id === id)
-        return option ? option.value : id.toString()
-      })
+      return editValue.map(id => id.toString())
     }
     return editValue ? [editValue.toString()] : []
   }
@@ -252,29 +281,22 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   // Preparar las opciones para el MultiSelect de géneros
   const getGenreOptions = () => {
     return options.map(option => ({
-      value: option.value, // Mostrar el nombre como valor
-      label: option.label, // Mostrar el nombre como etiqueta
-      id: option.id // Mantener el ID para referencia
+      value: option.id?.toString() || option.value,
+      label: option.label,
+      id: option.id
     }))
   }
 
   switch (columnId) {
     case "title":
     case "awards":
+    case "image_url":
       return (
         <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2">
           <Input
             value={editValue || ""}
             {...commonInputProps}
           />
-          <div className="flex justify-end gap-2 mt-2">
-            <Button variant="outline" size="sm" onClick={onCancel}>
-              Cancelar
-            </Button>
-            <Button size="sm" onClick={() => handleSave()}>
-              Guardar
-            </Button>
-          </div>
         </div>
       )
 
@@ -291,14 +313,6 @@ export const EditableCell: React.FC<EditableCellProps> = ({
             value={editValue || ""}
             {...commonInputProps}
           />
-          <div className="flex justify-end gap-2 mt-2">
-            <Button variant="outline" size="sm" onClick={onCancel}>
-              Cancelar
-            </Button>
-            <Button size="sm" onClick={() => handleSave()}>
-              Guardar
-            </Button>
-          </div>
         </div>
       )
 
@@ -363,9 +377,10 @@ export const EditableCell: React.FC<EditableCellProps> = ({
             className="text-sm p-2"
             placeholder="Selecciona géneros"
             tableName="genres"
-            returnId={false} // Cambiado a false para trabajar con nombres
+            returnId={true}
             refreshOptions={refreshOptions}
             creatable={true}
+            columnId={columnId} // Pasar el columnId para colores consistentes
           />
           <div className="p-1 border-t flex justify-end gap-1 text-xs">
             <Button
@@ -406,6 +421,7 @@ export const EditableCell: React.FC<EditableCellProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={`Selecciona ${columnId}`}
             creatable={true}
+            columnId={columnId} // Pasar el columnId para colores consistentes
           />
         </div>
       )
@@ -424,9 +440,10 @@ export const EditableCell: React.FC<EditableCellProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={`Selecciona ${columnId === 'universe' ? 'un universo' : columnId}`}
             tableName={getTableName(columnId)}
-            returnId={false}
+            returnId={true}
             refreshOptions={refreshOptions}
             creatable={true}
+            columnId={columnId} // Pasar el columnId para colores consistentes
           />
         </div>
       )
@@ -448,6 +465,69 @@ export const EditableCell: React.FC<EditableCellProps> = ({
             <option value="true">Sí</option>
             <option value="false">No</option>
           </select>
+        </div>
+      )
+    case "summary":
+      return (
+        <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2 w-[600px]">
+          <Textarea
+            value={editValue || ""}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.ctrlKey) {
+                e.preventDefault()
+                handleSave()
+              }
+              if (e.key === "Escape") {
+                onCancel()
+              }
+            }}
+            className="text-sm resize-none min-h-[400px]"
+            ref={textareaRef}
+          />
+        </div>
+      )
+
+    case "review":
+      return (
+        <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2 w-[300px]">
+          <Textarea
+            value={editValue || ""}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.ctrlKey) {
+                e.preventDefault()
+                handleSave()
+              }
+              if (e.key === "Escape") {
+                onCancel()
+              }
+            }}
+            className="text-sm resize-none min-h-[100px]"
+            ref={textareaRef}
+          />
+        </div>
+      )
+
+    case "main_characters":
+    case "favorite_character":
+      return (
+        <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2 w-[300px]">
+          <Input
+            value={editValue || ""}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                handleSave()
+              }
+              if (e.key === "Escape") {
+                onCancel()
+              }
+            }}
+            className="text-sm"
+            ref={inputRef}
+          />
         </div>
       )
 

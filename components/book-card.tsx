@@ -1,39 +1,25 @@
 import { Heart, Star } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import Image from "next/image"
 import type { Book } from "@/lib/types"
+import { AVAILABLE_COLORS, getConsistentColorIndex } from "@/lib/colors";
 
 interface BookCardProps {
   book: Book
 }
 
-// Colores personalizados más suaves y aesthetic
-const availableColors = [
-  "bg-[#f2f1ef] text-gray-700 border border-gray-300",
-  "bg-[#e6e4e0] text-gray-700 border border-gray-300",
-  "bg-[#efdfd7] text-amber-800 border border-amber-300",
-  "bg-[#f7dcc9] text-orange-800 border border-orange-300",
-  "bg-[#f1dfaf] text-yellow-800 border border-yellow-300",
-  "bg-[#dbecdd] text-green-800 border border-green-300",
-  "bg-[#d3e7f2] text-blue-800 border border-blue-300",
-  "bg-[#e7ddef] text-purple-800 border border-purple-300",
-  "bg-[#f7dfea] text-pink-800 border border-pink-300",
-  "bg-[#fbddd9] text-red-800 border border-red-300",
-]
+const availableColors = AVAILABLE_COLORS;
 
-// Función para generar color consistente basado en el nombre del género
-const getGenreColor = (genreName: string) => {
-  // Crear un hash simple del nombre para obtener un índice consistente
-  let hash = 0
-  for (let i = 0; i < genreName.length; i++) {
-    const char = genreName.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash // Convertir a 32bit integer
-  }
-  const index = Math.abs(hash) % availableColors.length
-  return availableColors[index]
+// Función para obtener estilos de color consistentes para géneros
+const getGenreColorStyle = (genreName: string) => {
+  const colorIndex = getConsistentColorIndex(genreName, "bookCardGenres", availableColors.length);
+  const colorClass = availableColors[colorIndex];
+  return {
+    backgroundColor: colorClass.bg,
+    borderColor: colorClass.border.replace('border-', '#'),
+    color: colorClass.text.replace('text-', '#')
+  };
 }
 
 export function BookCard({ book }: BookCardProps) {
@@ -68,8 +54,9 @@ export function BookCard({ book }: BookCardProps) {
             {book.genres?.slice(0, 2).map((genre) => (
               <Badge
                 key={genre.id}
-                variant="outline" // Usar variante outline para evitar hover de fondo por defecto
-                className={`${getGenreColor(genre.name)} font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full hover:scale-105 transition-transform duration-200`}
+                variant="outline"
+                style={getGenreColorStyle(genre.name)}
+                className="font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full hover:scale-105 transition-transform duration-200"
                 title={genre.name}
               >
                 <span className="truncate">{genre.name}</span>
@@ -77,7 +64,7 @@ export function BookCard({ book }: BookCardProps) {
             ))}
             {book.genres && book.genres.length > 2 && (
               <Badge
-                variant="outline" // Usar variante outline
+                variant="outline"
                 className="bg-[#f2f1ef] text-gray-600 border border-gray-300 font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs hover:scale-105 transition-transform duration-200"
                 title={`+${book.genres.length - 2} géneros más: ${book.genres.slice(2).map(g => g.name).join(', ')}`}
               >
@@ -108,7 +95,7 @@ export function BookCard({ book }: BookCardProps) {
           </div>
         </div>
 
-        {/* Review/descripción del libro - movida abajo y estilizada */}
+        {/* Review/descripción del libro */}
         {book.review && (
           <div className="pt-2 mt-2 border-t border-gray-100">
             <p className="text-sm text-gray-700 line-clamp-2 leading-snug italic">

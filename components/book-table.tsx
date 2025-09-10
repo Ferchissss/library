@@ -13,10 +13,14 @@ import { supabase } from '@/lib/supabaseClient'
 import { toast } from "sonner"
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog"
 import { EditableCell } from "./EditableCell"
+import { AVAILABLE_COLORS, getConsistentColorIndex } from "@/lib/colors";
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+
 interface BookTableProps {
   books: Book[]
   quotesMap: Record<number, Quote[]>
-  refreshData?: () => void
+  updateBookMutation: any
+  updateBookGenresMutation: any
 }
 
 interface Column {
@@ -63,43 +67,29 @@ const withStickyOffsets = (cols: Column[]): Column[] => {
   })
 }
 
-const availableColors = [
-  "bg-[#f2f1ef] text-gray-700 border border-gray-300",
-  "bg-[#e6e4e0] text-gray-700 border border-gray-300",
-  "bg-[#efdfd7] text-amber-800 border border-amber-300",
-  "bg-[#f7dcc9] text-orange-800 border border-orange-300",
-  "bg-[#f1dfaf] text-yellow-800 border border-yellow-300",
-  "bg-[#dbecdd] text-green-800 border border-green-300",
-  "bg-[#d3e7f2] text-blue-800 border border-blue-300",
-  "bg-[#e7ddef] text-purple-800 border border-purple-300",
-  "bg-[#f7dfea] text-pink-800 border border-pink-300",
-  "bg-[#fbddd9] text-red-800 border border-red-300",
-]
+const availableColors = AVAILABLE_COLORS;
 
-function getConsistentColor(value?: string | null) {
-  if (!value) return availableColors[0]
-  let hash = 0
-  for (let i = 0; i < value.length; i++) {
-    const char = value.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash = hash & hash
+// Función para obtener estilos de color consistentes por columna
+const getBadgeStyle = (columnId: string, value: string) => {
+  if (!value) {
+    return {
+      backgroundColor: availableColors[0].bg,
+      borderColor: availableColors[0].border.replace('border-', '#'),
+      color: availableColors[0].text.replace('text-', '#')
+    };
   }
-  const index = Math.abs(hash) % availableColors.length
-  return availableColors[index]
-}
+  
+  const colorIndex = getConsistentColorIndex(value, columnId, availableColors.length);
+  const colorClass = availableColors[colorIndex];
+  return {
+    backgroundColor: colorClass.bg,
+    borderColor: colorClass.border.replace('border-', '#'),
+    color: colorClass.text.replace('text-', '#')
+  };
+};
 
-const getBadgeVariant = (field: string, value: string) => {
-  const fixedColorMap: Record<string, Record<string, string>> = {
-    readingDensity: {
-      Densa: "bg-[#fbddd9] text-red-800 border border-red-300",
-      Media: "bg-[#f1dfaf] text-yellow-800 border border-yellow-300",
-      Ligera: "bg-[#dbecdd] text-green-800 border border-green-300",
-    },
-  }
-  return fixedColorMap[field]?.[value] || getConsistentColor(value)
-}
-
-export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
+export function BookTable({ books, quotesMap, updateBookMutation, updateBookGenresMutation }: BookTableProps) {
+  const queryClient = useQueryClient();
   const [columns, setColumns] = useState<Column[]>(() => withStickyOffsets(initialColumns))
   const [draggedColumn, setDraggedColumn] = useState<number | null>(null)
   const [resizingColumn, setResizingColumn] = useState<number | null>(null)
@@ -110,72 +100,53 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [bookToDeleteId, setBookToDeleteId] = useState<number | null>(null)
-  
-  const [typesOptions, setTypesOptions] = useState<{ value: string; label: string }[]>([])
-  const [publishersOptions, setPublishersOptions] = useState<{ value: string; label: string }[]>([])
-  const [languagesOptions, setLanguagesOptions] = useState<{ value: string; label: string }[]>([])
-  const [erasOptions, setErasOptions] = useState<{ value: string; label: string }[]>([])
-  const [formatsOptions, setFormatsOptions] = useState<{ value: string; label: string }[]>([])
-  const [audiencesOptions, setAudiencesOptions] = useState<{ value: string; label: string }[]>([])
-  const [yearsOptions, setYearsOptions] = useState<{ value: string; label: string }[]>([])
-  const [authorsOptions, setAuthorsOptions] = useState<{ value: string; label: string }[]>([])
-  const [seriesOptions, setSeriesOptions] = useState<{ value: string; label: string }[]>([])
-  const [genresOptions, setGenresOptions] = useState<{ value: string; label: string }[]>([])
-
   const [editingCell, setEditingCell] = useState<{rowId: number, columnId: string} | null>(null)
 
   const tableRef = useRef<HTMLTableElement>(null)
   const tableContainerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const { data: types } = await supabase.from("books").select("type").not("type", "is", null).order("type", { ascending: true })
-        setTypesOptions([...new Set(types?.map(t => t.type))].map(t => ({ value: t, label: t })) || [])
+  // Query para obtener opciones
+  const { data: optionsData } = useQuery({
+    queryKey: ['table-options'],
+    queryFn: async () => {
+      const [
+        { data: types },
+        { data: publishers },
+        { data: languages },
+        { data: eras },
+        { data: formats },
+        { data: audiences },
+        { data: years },
+        { data: authors },
+        { data: series },
+        { data: genres }
+      ] = await Promise.all([
+        supabase.from("books").select("type").not("type", "is", null).order("type", { ascending: true }),
+        supabase.from("books").select("publisher").not("publisher", "is", null).order("publisher", { ascending: true }),
+        supabase.from("books").select("language").not("language", "is", null).order("language", { ascending: true }),
+        supabase.from("books").select("era").not("era", "is", null).order("era", { ascending: true }),
+        supabase.from("books").select("format").not("format", "is", null).order("format", { ascending: true }),
+        supabase.from("books").select("audience").not("audience", "is", null).order("audience", { ascending: true }),
+        supabase.from("books").select("year").not("year", "is", null).order("year", { ascending: false }),
+        supabase.from("authors").select("id, name").order("name", { ascending: true }),
+        supabase.from("series").select("id, name").order("name", { ascending: true }),
+        supabase.from("genres").select("id, name").order("name", { ascending: true })
+      ])
 
-        const { data: publishers } = await supabase.from("books").select("publisher").not("publisher", "is", null).order("publisher", { ascending: true })
-        setPublishersOptions([...new Set(publishers?.map(p => p.publisher))].map(p => ({ value: p, label: p })) || [])
-
-        const { data: languages } = await supabase.from("books").select("language").not("language", "is", null).order("language", { ascending: true })
-        setLanguagesOptions([...new Set(languages?.map(l => l.language))].map(l => ({ value: l, label: l })) || [])
-
-        const { data: eras } = await supabase.from("books").select("era").not("era", "is", null).order("era", { ascending: true })
-        setErasOptions([...new Set(eras?.map(e => e.era))].map(e => ({ value: e, label: e })) || [])
-
-        const { data: formats } = await supabase.from("books").select("format").not("format", "is", null).order("format", { ascending: true })
-        setFormatsOptions([...new Set(formats?.map(f => f.format))].map(f => ({ value: f, label: f })) || [])
-
-        const { data: audiences } = await supabase.from("books").select("audience").not("audience", "is", null).order("audience", { ascending: true })
-        setAudiencesOptions([...new Set(audiences?.map(a => a.audience))].map(a => ({ value: a, label: a })) || [])
-
-        const { data: years } = await supabase.from("books").select("year").not("year", "is", null).order("year", { ascending: false })
-        setYearsOptions([...new Set(years?.map(y => y.year?.toString()))].map(y => ({ value: y, label: y })) || [])
-
-        const { data: authors } = await supabase
-          .from("authors")
-          .select("id, name")
-          .order("name", { ascending: true })
-        setAuthorsOptions(authors?.map(a => ({ value: a.id.toString(), label: a.name })) || [])
-
-        const { data: series } = await supabase
-          .from("series")
-          .select("id, name")
-          .order("name", { ascending: true })
-        setSeriesOptions(series?.map(s => ({ value: s.id.toString(), label: s.name })) || [])
-
-        const { data: genres } = await supabase
-          .from("genres")
-          .select("id, name")
-          .order("name", { ascending: true })
-        setGenresOptions(genres?.map(g => ({ value: g.id.toString(), label: g.name })) || [])
-
-      } catch (error) {
-        console.error("Error fetching options:", error)
+      return {
+        types: [...new Set(types?.map(t => t.type))].map(t => ({ value: t, label: t })) || [],
+        publishers: [...new Set(publishers?.map(p => p.publisher))].map(p => ({ value: p, label: p })) || [],
+        languages: [...new Set(languages?.map(l => l.language))].map(l => ({ value: l, label: l })) || [],
+        eras: [...new Set(eras?.map(e => e.era))].map(e => ({ value: e, label: e })) || [],
+        formats: [...new Set(formats?.map(f => f.format))].map(f => ({ value: f, label: f })) || [],
+        audiences: [...new Set(audiences?.map(a => a.audience))].map(a => ({ value: a, label: a })) || [],
+        years: [...new Set(years?.map(y => y.year?.toString()))].map(y => ({ value: y, label: y })) || [],
+        authors: authors?.map(a => ({ value: a.id.toString(), label: a.name, id: a.id })) || [],
+        series: series?.map(s => ({ value: s.id.toString(), label: s.name, id: s.id })) || [],
+        genres: genres?.map(g => ({ value: g.id.toString(), label: g.name, id: g.id })) || []
       }
     }
-
-    fetchOptions()
-  }, [])
+  })
 
   const getBookQuotes = (bookId: number) => quotesMap[bookId] || []
 
@@ -196,7 +167,7 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
     if (bookToDeleteId !== null) {
       try {
         await supabase.rpc('delete_and_reorder_book', { p_book_id: bookToDeleteId })
-        refreshData?.()
+        queryClient.invalidateQueries({ queryKey: ['books'] })
         toast.success('Libro eliminado y orden actualizado correctamente')
       } catch (error) {
         toast.error('Error al eliminar el libro')
@@ -208,35 +179,9 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
   }
 
   const handleSaveGenres = async (bookId: number, genreIds: string[]) => {
-    try {
-      const numericGenreIds = genreIds.map(id => parseInt(id))
-      
-      const { error: deleteError } = await supabase
-        .from("book_genre")
-        .delete()
-        .eq("book_id", bookId)
-
-      if (deleteError) throw deleteError
-
-      if (numericGenreIds.length > 0) {
-        const { error: insertError } = await supabase
-          .from("book_genre")
-          .insert(numericGenreIds.map(genreId => ({
-            book_id: bookId,
-            genre_id: genreId
-          })))
-
-        if (insertError) throw insertError
-      }
-
-      toast.success("Géneros actualizados correctamente")
-      refreshData?.()
-      setEditingCell(null)
-    } catch (error) {
-      console.error("Error updating genres:", error)
-      toast.error("No se pudieron actualizar los géneros")
-      setEditingCell(null)
-    }
+    const numericGenreIds = genreIds.map(id => parseInt(id)).filter(id => !isNaN(id))
+    updateBookGenresMutation.mutate({ bookId, genreIds: numericGenreIds })
+    setEditingCell(null)
   }
 
   const handleColumnDragStart = (e: React.DragEvent, index: number) => {
@@ -293,22 +238,57 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
     }
   }, [resizingColumn, startX, startWidth, columns])
 
+  const refreshAuthors = async () => {
+    const { data: authors } = await supabase
+      .from("authors")
+      .select("id, name")
+      .order("name", { ascending: true })
+    queryClient.setQueryData(['table-options'], (old: any) => ({
+      ...old,
+      authors: authors?.map(a => ({ value: a.id.toString(), label: a.name, id: a.id })) || []
+    }))
+  }
+
+  const refreshSeries = async () => {
+    const { data: series } = await supabase
+      .from("series")
+      .select("id, name")
+      .order("name", { ascending: true })
+    queryClient.setQueryData(['table-options'], (old: any) => ({
+      ...old,
+      series: series?.map(s => ({ value: s.id.toString(), label: s.name, id: s.id })) || []
+    }))
+  }
+
+  const refreshGenres = async () => {
+    const { data: genres } = await supabase
+      .from("genres")
+      .select("id, name")
+      .order("name", { ascending: true })
+    queryClient.setQueryData(['table-options'], (old: any) => ({
+      ...old,
+      genres: genres?.map(g => ({ value: g.id.toString(), label: g.name, id: g.id })) || []
+    }))
+  }
+
   const getOptionsForField = (field: string) => {
-    const fieldOptions: Record<string, { value: string; label: string }[]> = {
-      type: typesOptions, 
-      year: yearsOptions, 
-      publisher: publishersOptions,
-      language: languagesOptions, 
-      era: erasOptions, 
-      format: formatsOptions,
-      audience: audiencesOptions,
-      author: authorsOptions,
-      universe: seriesOptions,
-      genre: genresOptions,
+    if (!optionsData) return []
+    
+    const fieldOptions: Record<string, { value: string; label: string; id?: number }[]> = {
+      type: optionsData.types, 
+      year: optionsData.years, 
+      publisher: optionsData.publishers,
+      language: optionsData.languages, 
+      era: optionsData.eras, 
+      format: optionsData.formats,
+      audience: optionsData.audiences,
+      author: optionsData.authors,
+      universe: optionsData.series,
+      genre: optionsData.genres,
       readingDensity: [
-        { value: "Ligera", label: "Ligera" },
-        { value: "Media", label: "Media" },
-        { value: "Densa", label: "Densa" }
+        { value: "Light", label: "Light" },
+        { value: "Medium", label: "Medium" },
+        { value: "Dense", label: "Dense" }
       ],
     }
     return fieldOptions[field] || []
@@ -358,13 +338,13 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
         return (
           <Badge
             variant="outline"
-            className={`${getBadgeVariant(columnId, authorName)} font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full`}
+            style={getBadgeStyle(columnId, authorName)}
+            className="font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full"
             title={authorName}
           >
             <span className="truncate">{authorName}</span>
           </Badge>
         )
-
       case "type":
       case "publisher":
       case "language":
@@ -375,13 +355,13 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
         return (
           <Badge
             variant="outline"
-            className={`${getBadgeVariant(columnId, value)} font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full`}
+            style={getBadgeStyle(columnId, value)}
+            className="font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full"
             title={value}
           >
             <span className="truncate">{value}</span>
           </Badge>
         )
-
       case "dateStarted":
       case "dateRead":
         return (
@@ -397,7 +377,8 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
               <div className="text-center">
                 <Badge
                   variant="outline"
-                  className={`${getBadgeVariant("year", value.toString())} font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full`}
+                  style={getBadgeStyle("year", value.toString())}
+                  className="font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full"
                   title={value.toString()}
                 >
                   <span className="truncate">{value}</span>
@@ -441,35 +422,36 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
         return (
           <Badge
             variant="outline"
-            className={`${getBadgeVariant("series", universeName)} font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full`}
+            style={getBadgeStyle("universe", universeName)}
+            className="font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs max-w-full"
             title={universeName}
           >
             <span className="truncate">{universeName}</span>
           </Badge>
         )
-
-      case "genre":
-        const maxVisible = 3;
-        return (
-          <div className="relative w-full h-full flex items-center">
-            <div className="flex gap-1 overflow-hidden">
-              {value.slice(0, maxVisible).map((genreId: string) => {
-                const genre = genresOptions.find(g => g.value === genreId);
-                return genre ? (
-                  <Badge
-                    key={genreId}
-                    variant="outline"
-                    className={`${getBadgeVariant("genre", genre.label)} font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs whitespace-nowrap`}
-                    title={genre.label}
-                  >
-                    {genre.label}
-                  </Badge>
-                ) : null;
-              })}
+        case "genre":
+          const maxVisible = 3;
+          return (
+            <div className="relative w-full h-full flex items-center">
+              <div className="flex gap-1 overflow-hidden">
+                {value.slice(0, maxVisible).map((genreId: string) => {
+                  const genre = optionsData?.genres?.find(g => g.value === genreId);
+                  return genre ? (
+                    <Badge
+                      key={genreId}
+                      variant="outline"
+                      style={getBadgeStyle("genre", genre.label)}
+                      className="font-medium px-1.5 py-0 rounded-[3px] shadow-sm text-xs whitespace-nowrap"
+                      title={genre.label}
+                    >
+                      {genre.label}
+                    </Badge>
+                  ) : null;
+                })}
+              </div>
             </div>
-          </div>
-        );  
-      default:
+          );
+        default:
         return <span className="text-slate-600 text-xs">{value}</span>
     }
   }
@@ -481,13 +463,11 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
     if (editingCell?.rowId === book.id && editingCell.columnId === columnId) {
       return (
         <>
-          {/* Overlay que cubre toda la pantalla */}
           <div 
             className="fixed inset-0 bg-transparent z-40 cursor-default"
             onClick={() => setEditingCell(null)}
           />
           
-          {/* Editor */}
           <EditableCell
             book={book}
             columnId={columnId}
@@ -497,19 +477,20 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
               if (columnId === "genre") {
                 handleSaveGenres(book.id, newValue || [])
               } else {
-                refreshData?.()
+                updateBookMutation.mutate({
+                  id: book.id,
+                  updates: { [columnId]: newValue }
+                })
                 setEditingCell(null)
               }
             }}
             onCancel={() => setEditingCell(null)}
-            refreshOptions={async () => {
-              // Actualizar las opciones según el campo
-              if (columnId === "author") {
-                const { data: authors } = await supabase.from("authors").select("id, name")
-                setAuthorsOptions(authors?.map(a => ({ value: a.id.toString(), label: a.name })) || [])
-              }
-              // Similar para otros campos
-            }}
+            refreshOptions={
+              columnId === "author" ? refreshAuthors :
+              columnId === "universe" ? refreshSeries :
+              columnId === "genre" ? refreshGenres :
+              undefined
+            }
           />        
         </>
       )
@@ -589,6 +570,8 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
         isOpen={isModalOpen}
         onOpenChange={setIsModalOpen}
         quotes={selectedBook ? getBookQuotes(selectedBook.id) : []}
+        updateBookMutation={updateBookMutation}
+        updateBookGenresMutation={updateBookGenresMutation}
       />
       
       <ConfirmDeleteDialog
@@ -639,8 +622,7 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
             </thead>
 
             <tbody>
-              {books
-              .map((book, bookIndex) => (
+              {books.map((book, bookIndex) => (
                 <motion.tr
                   key={book.id}
                   initial={{ opacity: 0, y: 5 }}
@@ -648,7 +630,7 @@ export function BookTable({ books, quotesMap, refreshData }: BookTableProps) {
                   transition={{ duration: 0.3, delay: bookIndex * 0.04 }}
                   className="border-b border-purple-200 hover:bg-purple-100/50 transition-all duration-300 group h-4 rounded-md"
                 >
-                  {columns.map((column) => (
+                  {columns.map((column) => (  
                     <td
                       key={column.id}
                       className={`p-1 border-r border-purple-100 last:border-r-0 ${
