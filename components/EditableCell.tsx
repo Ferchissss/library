@@ -76,6 +76,15 @@ export const EditableCell: React.FC<EditableCellProps> = ({
     const valueToSave = newValue !== undefined ? newValue : editValue
     
     try {
+      // Validación específica para rating
+      if (columnId === "rating") {
+        const ratingValue = parseFloat(valueToSave);
+        if (ratingValue < 1 || ratingValue > 10) {
+          toast.error("La calificación debe estar entre 1 y 10");
+          onCancel();
+          return;
+        }
+      }
       const fieldMap: Record<string, string> = {
         title: "title",
         rating: "rating",
@@ -307,9 +316,9 @@ export const EditableCell: React.FC<EditableCellProps> = ({
         <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2">
           <Input
             type="number"
-            min={columnId === "rating" ? "0" : "1"}
+            min={columnId === "rating" ? "1" : "1"}
             max={columnId === "rating" ? "10" : undefined}
-            step={columnId === "rating" ? "0.1" : "1"}
+            step={columnId === "rating" ? "1" : "1"}
             value={editValue || ""}
             {...commonInputProps}
           />

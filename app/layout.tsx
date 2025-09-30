@@ -19,7 +19,7 @@ import {
 import { Database, BookOpen, Users, BarChart3, Quote, Trophy, BookMarked, Plus } from "lucide-react"
 import Link from "next/link"
 import "./globals.css"
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ["latin"] })
 

@@ -19,7 +19,6 @@ interface BookDetailsModalProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   quotes: Quote[]
-  onBookUpdate: (book: Book) => void
   refreshData?: () => void
 }
 
@@ -36,7 +35,7 @@ const getGenreColorStyle = (genreName: string) => {
   }
 }
 
-export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpdate, refreshData }: BookDetailsModalProps) {
+export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, refreshData }: BookDetailsModalProps) {
   const [editingField, setEditingField] = useState<{ section: string; field: string } | null>(null)
   const [options, setOptions] = useState<Record<string, { value: string; label: string; id?: number }[]>>({})
 
@@ -171,34 +170,9 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
 
       if (error) throw error
 
-      const updatedBook = { ...book }
-
-      // Actualizar el campo correspondiente en el objeto local
-      if (field === "author" && dbValue) {
-        // Buscar el autor en las opciones para obtener el nombre
-        const authorOption = options.author?.find((a) => a.id === dbValue)
-        if (authorOption) {
-          updatedBook.author = { id: dbValue, name: authorOption.label }
-        }
-      } else if (field === "series" && dbValue) {
-        // Buscar la serie en las opciones para obtener el nombre
-        const seriesOption = options.series?.find((s) => s.id === dbValue)
-        if (seriesOption) {
-          updatedBook.series = { id: dbValue, name: seriesOption.label }
-        }
-      } else if (field === "series" && !dbValue) {
-        updatedBook.series = undefined
-      } else if (field === "author" && !dbValue) {
-        updatedBook.author = undefined 
-      } else {
-        // Para campos simples, actualizar directamente
-        ;(updatedBook as any)[field] = newValue
-      }
-
-      onBookUpdate(updatedBook) // ← Notificar al padre
-
       toast.success(`Campo ${field} actualizado`)
       setEditingField(null)
+      refreshData?.()
     } catch (error) {
       console.error("Error updating field:", error)
       toast.error(`No se pudo actualizar el campo ${field}`)
@@ -228,18 +202,9 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
         if (insertError) throw insertError
       }
 
-      const updatedGenres = numericGenreIds
-        .map((genreId) => {
-          const genreOption = options.genre?.find((g) => g.id === genreId)
-          return genreOption ? { id: genreId, name: genreOption.label } : null
-        })
-        .filter(Boolean) as { id: number; name: string }[]
-
-      const updatedBook = { ...book, genres: updatedGenres }
-      onBookUpdate(updatedBook) // ← Notificar al padre
-
       toast.success("Géneros actualizados correctamente")
       setEditingField(null)
+      refreshData?.()
     } catch (error) {
       console.error("Error updating genres:", error)
       toast.error("No se pudieron actualizar los géneros")
@@ -271,7 +236,7 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
       image_url: book.image_url,
       summary: book.summary,
       main_characters: book.main_characters,
-      favorite_character: book  .favorite_character,
+      favorite_character: book.favorite_character,
     }
 
     return fieldValues[field] ?? null
@@ -334,7 +299,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderImageField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "header" && editingField?.field === "image_url"
 
     if (isEditing) {
@@ -374,7 +338,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderSummaryField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "opinion" && editingField?.field === "summary"
 
     if (isEditing) {
@@ -409,7 +372,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderMainCharactersField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "characters" && editingField?.field === "main_characters"
 
     if (isEditing) {
@@ -457,7 +419,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderFavoriteCharacterField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "characters" && editingField?.field === "favorite_character"
 
     if (isEditing) {
@@ -492,7 +453,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderSeriesField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "info" && editingField?.field === "series"
     const seriesName = book.series?.name || ""
 
@@ -526,7 +486,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderReadingDifficultyField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "details" && editingField?.field === "reading_difficulty"
 
     if (isEditing) {
@@ -559,7 +518,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderFavoriteField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "details" && editingField?.field === "favorite"
 
     if (isEditing) {
@@ -601,7 +559,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderDateField = (field: "start_date" | "end_date", label: string, icon: string) => {
-    if (!book) return null
     const isEditing = editingField?.section === "dates" && editingField?.field === field
     const dateValue = field === "start_date" ? book.start_date : book.end_date
 
@@ -641,7 +598,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderTitleField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "header" && editingField?.field === "title"
 
     if (isEditing) {
@@ -670,7 +626,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderReviewField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "left" && editingField?.field === "review"
     const hasReview = !!book.review
 
@@ -717,7 +672,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderRatingField = () => {
-    if (!book) return null
     const isEditing = editingField?.section === "left" && editingField?.field === "rating"
     const hasRating = book.rating !== undefined && book.rating !== null
 
@@ -759,8 +713,6 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
   }
 
   const renderGenresField = () => {
-    if (!book) return null
-    
     const isEditing = editingField?.section === "left" && editingField?.field === "genre"
     const hasGenres = book.genres && book.genres.length > 0
 
@@ -768,7 +720,7 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
       return (
         <div className="flex flex-wrap gap-1 justify-center">
           <EditableCell
-            book={book}
+            book={book!}
             columnId="genre"
             value={book.genres?.map((g) => g.id.toString()) || []}
             options={options.genre || []}
@@ -785,8 +737,7 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
         onClick={() => setEditingField({ section: "left", field: "genre" })}
       >
         {hasGenres ? (
-          // Usar optional chaining y fallback a array vacío
-          (book.genres || []).map((genre) => (
+          book.genres.map((genre) => (
             <Badge key={genre.id} style={getGenreColorStyle(genre.name)} className="border-0 font-medium px-2 py-1">
               {genre.name}
             </Badge>
@@ -811,7 +762,7 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
       <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
         {/* Overlay transparente cuando hay un campo en edición */}
         {editingField && (
-          <div className="fixed inset-0 bg-transparent z-60 cursor-default" onClick={() => setEditingField(null)} />
+          <div className="fixed inset-0 bg-black z-60 cursor-default" onClick={() => setEditingField(null)} />
         )}
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-2xl font-bold text-purple-800">{book.title}</DialogTitle>
@@ -905,13 +856,7 @@ export function BookDetailsModal({ book, isOpen, onOpenChange, quotes, onBookUpd
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 gap-3">
                           {renderEditableField("details", "era", "Época", book.era || "", options.era || [])}
-                          {renderEditableField(
-                            "details",
-                            "format",
-                            "Formato",
-                            book.format || "",
-                            options.format || [],
-                          )}
+                          {renderEditableField("details", "format", "Formato", book.format || "", options.format || [])}
                           {renderEditableField(
                             "details",
                             "audience",

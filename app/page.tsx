@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { AddBookModal } from "@/components/add-book-modal"
 import { supabase } from '@/lib/supabaseClient';
 import type { Book, Quote  } from "@/lib/types"  
+import { BookDetailsModal } from '@/components/book-details-modal'
 
 export default function HomePage() {
   const { viewMode } = useViewMode()
@@ -25,6 +26,7 @@ export default function HomePage() {
   const [books, setBooks] = useState<Book[]>([])
   const [quotesMap, setQuotesMap] = useState<Record<number, Quote[]>>({})
   const [loading, setLoading] = useState(true)
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [statsData, setStatsData] = useState({
     totalBooks: 0,
     booksThisYear: 0,
@@ -86,6 +88,23 @@ export default function HomePage() {
     }
     
     setStatsData(stats)
+  }
+  // Función para manejar la selección de libro
+  const handleBookSelect = (book: Book) => {
+    setSelectedBook(book)
+  }
+
+  // Función para actualizar libros
+  const handleBookUpdate = (updatedBook: Book) => {
+    setBooks(prevBooks => 
+      prevBooks.map(book => 
+        book.id === updatedBook.id ? updatedBook : book
+      )
+    )
+    // Si el libro actualizado es el seleccionado, actualizarlo también
+    if (selectedBook && selectedBook.id === updatedBook.id) {
+      setSelectedBook(updatedBook)
+    }
   }
 
   // Cargar libros al montar el componente
@@ -341,8 +360,17 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <BookTable books={filteredBooks} quotesMap={quotesMap} refreshData={fetchBooks} />
+          <BookTable books={filteredBooks} quotesMap={quotesMap} refreshData={fetchBooks} onBookSelect={handleBookSelect} onBookUpdate={handleBookUpdate}/>
         )}
+        {/* Modal de detalles del libro */}
+        <BookDetailsModal 
+          book={selectedBook}
+          isOpen={!!selectedBook}
+          onOpenChange={(open) => {if (!open) {setSelectedBook(null)}}}
+          quotes={selectedBook ? quotesMap[selectedBook.id] || [] : []}
+          onBookUpdate={handleBookUpdate} // ← Asegúrate de que esta línea existe
+          refreshData={fetchBooks}
+        />
 
         {filteredBooks.length === 0 && (
           <Card className="text-center py-12 bg-white/60 backdrop-blur-sm border-0">
