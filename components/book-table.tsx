@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { HeartIcon } from "@heroicons/react/24/solid"
 import type { Book, Quote } from "@/lib/types"
-import { BookDetailsModal } from "./book-details-modal"
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog"
@@ -21,7 +20,7 @@ interface BookTableProps {
   quotesMap: Record<number, Quote[]>
   refreshData?: () => void
   onBookSelect: (book: Book) => void
-  onBookUpdate: (book: Book) => void 
+  onBookUpdate: (book: Book) => void
 }
 
 interface Column {
@@ -234,16 +233,16 @@ export function BookTable({ books, quotesMap, refreshData, onBookSelect, onBookU
       }
 
       // Crear el libro actualizado
-      const currentBook = books.find(b => b.id === bookId)!
-      const updatedBook = { 
+      const currentBook = books.find((b) => b.id === bookId)!
+      const updatedBook = {
         ...currentBook,
         genres: numericGenreIds.map((genreId) => {
           const genre = genresOptions.find((g) => g.id === genreId)
           return genre ? { id: genreId, name: genre.label } : { id: genreId, name: `Genre ${genreId}` }
-        })
+        }),
       }
 
-      onBookUpdate(updatedBook) 
+      onBookUpdate(updatedBook)
       toast.success("Géneros actualizados correctamente")
       setEditingCell(null)
     } catch (error) {
@@ -518,8 +517,6 @@ export function BookTable({ books, quotesMap, refreshData, onBookSelect, onBookU
     if (editingCell?.rowId === book.id && editingCell.columnId === columnId) {
       return (
         <>
-          <div className="fixed inset-0 bg-transparent z-40 cursor-default" onClick={() => setEditingCell(null)} />
-
           <EditableCell
             book={book}
             columnId={columnId}
@@ -537,18 +534,18 @@ export function BookTable({ books, quotesMap, refreshData, onBookSelect, onBookU
                   // Primero obtener los nombres si es necesario
                   if (columnId === "author" && newValue) {
                     const { data: authorData } = await supabase
-                      .from('authors')
-                      .select('name')
-                      .eq('id', newValue)
+                      .from("authors")
+                      .select("name")
+                      .eq("id", newValue)
                       .single()
                     authorName = authorData?.name || "Unknown"
                   }
 
                   if (columnId === "universe" && newValue) {
                     const { data: seriesData } = await supabase
-                      .from('series')
-                      .select('name')
-                      .eq('id', newValue)
+                      .from("series")
+                      .select("name")
+                      .eq("id", newValue)
                       .single()
                     seriesName = seriesData?.name || "Unknown"
                   }
@@ -613,7 +610,7 @@ export function BookTable({ books, quotesMap, refreshData, onBookSelect, onBookU
                   if (error) throw error
 
                   // Buscar el libro actual en books
-                  const currentBook = books.find(b => b.id === book.id)!
+                  const currentBook = books.find((b) => b.id === book.id)!
                   const updatedBook = { ...currentBook }
 
                   // Actualizar el campo correspondiente
@@ -778,6 +775,8 @@ export function BookTable({ books, quotesMap, refreshData, onBookSelect, onBookU
 
   return (
     <div className="relative">
+      {/* OVERLAY GLOBAL para edición */}
+      {editingCell && (<div className="fixed inset-0 bg-transparent z-40 cursor-default" onClick={() => setEditingCell(null)} />)}
       <ConfirmDeleteDialog
         isOpen={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
@@ -838,7 +837,13 @@ export function BookTable({ books, quotesMap, refreshData, onBookSelect, onBookU
                     <td
                       key={column.id}
                       className={`p-1 border-r border-purple-100 last:border-r-0 ${
-                        column.isSticky ? "sticky z-10 bg-white/95 backdrop-blur-sm" : ""
+                        column.isSticky ? "sticky bg-white/95 backdrop-blur-sm" : ""
+                      } ${
+                        editingCell?.rowId === book.id && editingCell.columnId === column.id
+                          ? "z-[100]"
+                          : column.isSticky
+                            ? "z-10"
+                            : ""
                       }`}
                       style={{
                         width: column.width,
