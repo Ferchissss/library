@@ -15,6 +15,7 @@ import { AddBookModal } from "@/components/add-book-modal"
 import { supabase } from '@/lib/supabaseClient';
 import type { Book, Quote  } from "@/lib/types"  
 import { BookDetailsModal } from '@/components/book-details-modal'
+import { BookSearchButton } from '@/components/book-search-button'
 
 export default function HomePage() {
   const { viewMode } = useViewMode()
@@ -26,6 +27,7 @@ export default function HomePage() {
   const [books, setBooks] = useState<Book[]>([])
   const [quotesMap, setQuotesMap] = useState<Record<number, Quote[]>>({})
   const [loading, setLoading] = useState(true)
+  const [showSearch, setShowSearch] = useState(false)
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [statsData, setStatsData] = useState({
     totalBooks: 0,
@@ -89,6 +91,7 @@ export default function HomePage() {
     
     setStatsData(stats)
   }
+   
   // Función para manejar la selección de libro
   const handleBookSelect = (book: Book) => {
     setSelectedBook(book)
@@ -105,6 +108,12 @@ export default function HomePage() {
     if (selectedBook && selectedBook.id === updatedBook.id) {
       setSelectedBook(updatedBook)
     }
+  }
+  // === NUEVA FUNCIÓN PARA MANEJAR SELECCIÓN DESDE BÚSQUEDA ===
+  const handleSearchBookSelect = (book: any) => {
+    console.log('Libro seleccionado desde búsqueda:', book)
+    // Aquí puedes hacer lo que necesites con el libro seleccionado
+    // Por ejemplo, abrir un modal de detalles o agregarlo a la biblioteca
   }
 
   // Cargar libros al montar el componente
@@ -168,6 +177,7 @@ export default function HomePage() {
             <p className="text-purple-600">Gestiona y explora tu colección personal de libros</p>
           </div>
           <div className="flex gap-3">
+            <BookSearchButton onBookSelect={handleSearchBookSelect} />
             <Button
               onClick={fetchBooks}
               disabled={loading}

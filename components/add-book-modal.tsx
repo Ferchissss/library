@@ -881,7 +881,7 @@ Muchos años después, frente al pelotón de fusilamiento...|1|Filosofía"
                       </Select>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 md:col-span-2">
+                  <div className="flex items-center gap-4">
                     <Label htmlFor="readingDensity" className="text-purple-700 font-medium w-32 text-right">
                       Densidad:
                     </Label>
@@ -918,6 +918,18 @@ Muchos años después, frente al pelotón de fusilamiento...|1|Filosofía"
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  {/* Campo de URL de Portada al lado de Densidad */}
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="cover" className="text-purple-700 font-medium w-32 text-right">
+                      URL Portada:
+                    </Label>
+                    <Input
+                      id="cover"
+                      value={formData.cover}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, cover: e.target.value }))}
+                      className="border-purple-200 focus:border-purple-400 flex-1 h-6 py-1 text-sm"
+                    />
                   </div>
                 </div>
               </CardContent>

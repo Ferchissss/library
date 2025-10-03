@@ -775,17 +775,16 @@ export function BookTable({ books, quotesMap, refreshData, onBookSelect, onBookU
 
   return (
     <div className="relative">
-      {/* OVERLAY GLOBAL para edición */}
-      {editingCell && (<div className="fixed inset-0 bg-transparent z-40 cursor-default" onClick={() => setEditingCell(null)} />)}
       <ConfirmDeleteDialog
         isOpen={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         onConfirm={handleDeleteBook}
         confirmVariant="destructive"
       />
-
       <Card className="bg-white/95 backdrop-blur-sm border-2 border-purple-200 overflow-hidden relative rounded-2xl">
         <div className="overflow-x-auto" ref={tableContainerRef}>
+          {/* OVERLAY GLOBAL para edición */}
+          {editingCell && (<div className="fixed inset-0 bg-transparent z-40 cursor-default" onClick={() => setEditingCell(null)} />)}
           <table ref={tableRef} className="w-full text-sm relative table-fixed">
             <thead className="bg-gradient-to-r from-slate-50 via-purple-50 to-slate-50 border-b border-purple-200">
               <tr>

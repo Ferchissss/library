@@ -301,12 +301,13 @@ export const EditableCell: React.FC<EditableCellProps> = ({
     case "awards":
     case "image_url":
       return (
-        <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2">
           <Input
-            value={editValue || ""}
-            {...commonInputProps}
-          />
-        </div>
+          value={editValue || ""}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="absolute z-50 w-[250px] text-xs px-2 py-1 h-7 bg-white shadow-sm"
+          ref={inputRef}
+        />
       )
 
     case "rating":
