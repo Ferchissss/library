@@ -32,7 +32,7 @@ const getGenreColorStyle = (genreName: string) => {
   return {
     backgroundColor: colorClass.bg,
     borderColor: colorClass.border.replace("border-", "#"),
-    color: colorClass.text.replace("text-", "#"),
+    color: "#4B5563",
   }
 }
 

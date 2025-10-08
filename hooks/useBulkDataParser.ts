@@ -1,13 +1,14 @@
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabaseClient"
+import { transformToAddBookFormat, convertToBulkDataFormat, type AnalyzedBookData, type AddBookFormData } from '@/lib/bookDataTransformers'
 
 interface UseBulkDataParserProps {
   genresOptions: { value: string; label: string; id?: number }[]
   authorsOptions: { value: string; label: string; id?: number }[]
   seriesOptions: { value: string; label: string; id?: number }[]
-  setGenresOptions: (options: { value: string; label: string; id?: number }[]) => void
-  setAuthorsOptions: (options: { value: string; label: string; id?: number }[]) => void
-  setSeriesOptions: (options: { value: string; label: string; id?: number }[]) => void
+  setGenresOptions: React.Dispatch<React.SetStateAction<{ value: string; label: string; id?: number }[]>>
+  setAuthorsOptions: React.Dispatch<React.SetStateAction<{ value: string; label: string; id?: number }[]>>
+  setSeriesOptions: React.Dispatch<React.SetStateAction<{ value: string; label: string; id?: number }[]>>
 }
 
 interface ParseResult {
@@ -31,7 +32,7 @@ export function useBulkDataParser({
       .trim()
       .split("\n")
       .map((line) => line.trim())
-      .filter((line) => line.length > 0)
+      // .filter((line) => line.length > 0) // ← MANTÉN ESTA LÍNEA COMENTADA
 
     if (lines.length < 2) {
       toast.error("Error", {
@@ -50,7 +51,7 @@ export function useBulkDataParser({
     }
 
     // IDENTIFICAR SERIES NUEVAS
-    const seriesName = lines[22] || ""
+    const seriesName = lines[22] || "" // ← SERIE en línea 22
     const existingSeries = seriesOptions.find((s) => s.value === seriesName)
     const seriesToCreate: string[] = []
     
@@ -73,31 +74,31 @@ export function useBulkDataParser({
     })
 
     const parsedData = {
-      title: lines[0] || "",
-      author: authorName,
+      title: lines[0] || "",                    // 0. Título
+      author: lines[1] || "",                   // 1. Autor
       authorId: existingAuthor?.id || null,
       genres: bulkGenres,
       genreIds: genreIds,
-      rating: lines[3] || "",
-      type: lines[4] || "",
-      pages: lines[5] || "",
-      dateStarted: lines[6] || "",
-      dateRead: lines[7] || "",
-      year: lines[8] || "",
-      publisher: lines[9] || "",
-      language: lines[10] || "",
-      era: lines[11] || "",
-      format: lines[12] || "Digital",
-      audience: lines[13] || "Juvenil",
-      readingDensity: lines[14] || "",
-      awards: lines[15] || "",
-      cover: lines[16] || "",
+      rating: lines[3] || "",                   // 3. Calificación
+      type: lines[4] || "",                     // 4. Tipo
+      pages: lines[5] || "",                    // 5. Páginas ← CORREGIDO
+      dateStarted: lines[6] || "",              // 6. Fecha inicio
+      dateRead: lines[7] || "",                 // 7. Fecha fin
+      year: lines[8] || "",                     // 8. Año publicación ← CORREGIDO
+      publisher: lines[9] || "",                // 9. Editorial ← CORREGIDO
+      language: lines[10] || "",                // 10. Idioma ← CORREGIDO
+      era: lines[11] || "",                     // 11. Época
+      format: lines[12] || "Digital",           // 12. Formato
+      audience: lines[13] || "Juvenil",         // 13. Audiencia
+      readingDensity: lines[14] || "",          // 14. Densidad
+      awards: lines[15] || "",                  // 15. Premios
+      cover: lines[16] || "",                   // 16. Portada
       mainCharacters: lines[17] ? lines[17].split(",").map((c) => c.trim()) : [],
       favoriteCharacter: lines[18] || "",
       isFavorite: (lines[19] || "").toLowerCase() === "true",
       summary: lines[20] || "",
       review: lines[21] || "",
-      series: seriesName,
+      series: lines[22] || "",                  // 22. Serie ← CORREGIDO
       seriesId: existingSeries?.id || null,
       quotes: lines.slice(23).map((line) => {
         const [text, page, type, category] = line.split("|")
@@ -117,7 +118,6 @@ export function useBulkDataParser({
       genresToCreate
     }
   }
-
   const createNewAuthors = async (authorsToCreate: string[]): Promise<Record<string, number>> => {
     const authorIds: Record<string, number> = {}
     
@@ -141,7 +141,6 @@ export function useBulkDataParser({
           }])
         }
       } catch (error) {
-        console.error("Error creating author:", error)
         toast.error("Error", {
           description: `No se pudo crear el autor "${authorName}".`,
         })
@@ -174,7 +173,6 @@ export function useBulkDataParser({
           }])
         }
       } catch (error) {
-        console.error("Error creating series:", error)
         toast.error("Error", {
           description: `No se pudo crear la serie "${seriesName}".`,
         })
@@ -206,13 +204,45 @@ export function useBulkDataParser({
         ])
       }
     } catch (error) {
-      console.error("Error creating genres:", error)
       toast.error("Error", {
         description: `No se pudieron crear los géneros: ${genresToCreate.join(", ")}`,
       })
     }
     
     return genreIds
+  }
+
+  const identifyNewEntities = (bookData: AnalyzedBookData) => {
+    // IDENTIFICAR AUTORES NUEVOS
+    const existingAuthor = authorsOptions.find((a) => a.value === bookData.author)
+    const authorsToCreate: string[] = []
+    
+    if (bookData.author && !existingAuthor) {
+      authorsToCreate.push(bookData.author)
+    }
+
+    // IDENTIFICAR SERIES NUEVAS
+    const existingSeries = seriesOptions.find((s) => s.value === bookData.series)
+    const seriesToCreate: string[] = []
+    
+    if (bookData.series && !existingSeries) {
+      seriesToCreate.push(bookData.series)
+    }
+
+    // IDENTIFICAR GÉNEROS NUEVOS
+    const genreIds: number[] = []
+    const genresToCreate: string[] = []
+
+    bookData.genres.forEach((genreName) => {
+      const existingGenre = genresOptions.find((g) => g.value === genreName)
+      if (existingGenre?.id) {
+        genreIds.push(existingGenre.id)
+      } else if (genreName) {
+        genresToCreate.push(genreName)
+      }
+    })
+
+    return { authorsToCreate, seriesToCreate, genresToCreate, genreIds }
   }
 
   const processBulkData = async (bulkData: string) => {
@@ -253,5 +283,42 @@ export function useBulkDataParser({
     return formData
   }
 
-  return { processBulkData }
+  // Nueva función para procesar datos ya analizados
+  const processAnalyzedData = async (bookData: AnalyzedBookData): Promise<AddBookFormData & { authorId?: number | null; seriesId?: number | null; genreIds?: number[] }> => {
+    const { authorsToCreate, seriesToCreate, genresToCreate, genreIds } = identifyNewEntities(bookData)
+
+    // Crear elementos nuevos y obtener sus IDs
+    const [authorIds, seriesIds, newGenreIds] = await Promise.all([
+      createNewAuthors(authorsToCreate),
+      createNewSeries(seriesToCreate),
+      createNewGenres(genresToCreate)
+    ])
+
+    const formData = transformToAddBookFormat(bookData)
+
+    // Combinar IDs de géneros existentes y nuevos
+    const allGenreIds = [...genreIds]
+    if (genresToCreate.length > 0) {
+      bookData.genres.forEach((genre: string) => {
+        if (newGenreIds[genre] && !allGenreIds.includes(newGenreIds[genre])) {
+          allGenreIds.push(newGenreIds[genre])
+        }
+      })
+    }
+
+    // Devolver el formData con los IDs
+    return {
+      ...formData,
+      authorId: bookData.author && authorIds[bookData.author] ? authorIds[bookData.author] : null,
+      seriesId: bookData.series && seriesIds[bookData.series] ? seriesIds[bookData.series] : null,
+      genreIds: allGenreIds
+    }
+  }
+  
+  return { 
+    processBulkData,
+    processAnalyzedData,
+    transformToAddBookFormat,
+    convertToBulkDataFormat
+  }
 }

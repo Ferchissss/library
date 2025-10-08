@@ -388,7 +388,6 @@ export default function SearchPage() {
           book={selectedBook}
           isOpen={isDetailsOpen}
           onOpenChange={setIsDetailsOpen}
-          onAddToLibrary={handleAddToLibrary}
         />
       </div>
     </div>

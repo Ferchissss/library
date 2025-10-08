@@ -23,7 +23,7 @@ export function BulkInputSection({ onParse, isOpen, onOpenChange }: BulkInputSec
 
   return (
     <Card className="bg-purple-50/50 border-purple-200">
-      <Collapsible open={isOpen} onOpenChange={onOpenChange}>
+      <Collapsible open={isOpen} onOpenChange={onOpenChange}>a
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer hover:bg-purple-100/50 transition-colors py-2">
             <CardTitle className="flex items-center gap-2 text-purple-800 text-base">

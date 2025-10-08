@@ -16,6 +16,9 @@ import { supabase } from '@/lib/supabaseClient';
 import type { Book, Quote  } from "@/lib/types"  
 import { BookDetailsModal } from '@/components/book-details-modal'
 import { BookSearchButton } from '@/components/book-search-button'
+import { BookTextAnalyzerModal } from '@/components/text-analyzer-modal'
+import { useBulkDataParser } from '@/hooks/useBulkDataParser'
+import { transformToAddBookFormat } from '@/lib/bookDataTransformers'
 
 export default function HomePage() {
   const { viewMode } = useViewMode()
@@ -29,6 +32,25 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [showSearch, setShowSearch] = useState(false)
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
+  const [showAnalyzer, setShowAnalyzer] = useState(false)
+  const [showAddBook, setShowAddBook] = useState(false)
+  const [prefilledData, setPrefilledData] = useState<any>(null)
+  
+  // Estados para las opciones (necesarios para el analizador)
+  const [authorsOptions, setAuthorsOptions] = useState<{ value: string; label: string; id?: number }[]>([])
+  const [genresOptions, setGenresOptions] = useState<{ value: string; label: string; id?: number }[]>([])
+  const [seriesOptions, setSeriesOptions] = useState<{ value: string; label: string; id?: number }[]>([])
+
+  // Inicializar el hook de procesamiento de datos
+  const { processAnalyzedData } = useBulkDataParser({
+    genresOptions,
+    authorsOptions,
+    seriesOptions,
+    setGenresOptions,
+    setAuthorsOptions,
+    setSeriesOptions
+  })
+
   const [statsData, setStatsData] = useState({
     totalBooks: 0,
     booksThisYear: 0,
@@ -36,7 +58,35 @@ export default function HomePage() {
     averageRating: 0,
   })
 
-   // Función para cargar los libros desde Supabase
+  // Función para cargar las opciones necesarias para el analizador
+  const fetchOptions = async () => {
+    try {
+      // Autores
+      const { data: authors } = await supabase
+        .from("authors")
+        .select("id, name")
+        .order("name", { ascending: true })
+      setAuthorsOptions(authors?.map((a) => ({ value: a.name, label: a.name, id: a.id })) || [])
+
+      // Géneros
+      const { data: genres } = await supabase
+        .from("genres")
+        .select("id, name")
+        .order("name", { ascending: true })
+      setGenresOptions(genres?.map((g) => ({ value: g.name, label: g.name, id: g.id })) || [])
+
+      // Series
+      const { data: series } = await supabase
+        .from("series")
+        .select("id, name")
+        .order("name", { ascending: true })
+      setSeriesOptions(series?.map((s) => ({ value: s.name, label: s.name, id: s.id })) || [])
+    } catch (error) {
+      console.error("Error fetching options:", error)
+    }
+  }
+
+  // Función para cargar los libros desde Supabase
   const fetchBooks = async () => {
     try {
       setLoading(true)
@@ -46,14 +96,15 @@ export default function HomePage() {
         .order('id', { ascending: false })
       
       if (error) throw error
-      // 2. Obtener citas
+      
+      // Obtener citas
       const { data: quotesData, error: quotesError } = await supabase
         .from('quotes')
         .select('*')
       
       if (quotesError) throw quotesError
       
-      // 3. Crear el mapa de citas
+      // Crear el mapa de citas
       const quotesMap = quotesData?.reduce((acc, quote) => {
         if (quote.book_id) {
           if (!acc[quote.book_id]) {
@@ -63,6 +114,7 @@ export default function HomePage() {
         }
         return acc
       }, {} as Record<number, Quote[]>)
+      
       setBooks(data || [])
       setQuotesMap(quotesMap || {})
       calculateStats(data || [])
@@ -73,6 +125,7 @@ export default function HomePage() {
       setLoading(false)
     }
   }
+
   // Función para calcular estadísticas
   const calculateStats = (books: Book[]) => {
     const currentYear = new Date().getFullYear()
@@ -109,16 +162,24 @@ export default function HomePage() {
       setSelectedBook(updatedBook)
     }
   }
-  // === NUEVA FUNCIÓN PARA MANEJAR SELECCIÓN DESDE BÚSQUEDA ===
+
+  // Función para manejar selección desde búsqueda
   const handleSearchBookSelect = (book: any) => {
     console.log('Libro seleccionado desde búsqueda:', book)
-    // Aquí puedes hacer lo que necesites con el libro seleccionado
-    // Por ejemplo, abrir un modal de detalles o agregarlo a la biblioteca
   }
 
-  // Cargar libros al montar el componente
+  // Función para manejar la selección desde el analizador de texto
+  const handleAnalyzerBookSelect = async (bookData: any) => {
+    // 🎯 USAR DIRECTAMENTE LOS DATOS SIN PROCESAMIENTO EXTRA
+    setPrefilledData(bookData)
+    setShowAnalyzer(false)
+    setShowAddBook(true)
+  }
+
+  // Cargar libros y opciones al montar el componente
   useEffect(() => {
     fetchBooks()
+    fetchOptions()
   }, [])
 
   const filteredBooks = books
@@ -154,8 +215,6 @@ export default function HomePage() {
       }
     })
 
-  //const genres = [...new Set(booksData.map((book) => book.genre))]
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#f8f3fc" }}>
@@ -188,9 +247,23 @@ export default function HomePage() {
                 className={`h-3 w-3 ${loading ? "animate-spin" : ""}`}
               />
             </Button>
-            <AddBookModal refreshData={fetchBooks} />
+            <Button
+              onClick={() => setShowAnalyzer(true)}
+              variant="outline"
+              className="border-purple-300 text-purple-600 hover:bg-purple-100 hover:text-purple-700 transition-all duration-200"
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              Analizar Texto
+            </Button>
+            <AddBookModal 
+              refreshData={fetchBooks}
+              isOpen={showAddBook}
+              onOpenChange={setShowAddBook}
+              prefilledData={prefilledData}
+            />
           </div>
         </div>
+
         {/* Dashboard Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-md">
@@ -372,14 +445,29 @@ export default function HomePage() {
         ) : (
           <BookTable books={filteredBooks} quotesMap={quotesMap} refreshData={fetchBooks} onBookSelect={handleBookSelect} onBookUpdate={handleBookUpdate}/>
         )}
+
         {/* Modal de detalles del libro */}
         <BookDetailsModal 
           book={selectedBook}
           isOpen={!!selectedBook}
           onOpenChange={(open) => {if (!open) {setSelectedBook(null)}}}
           quotes={selectedBook ? quotesMap[selectedBook.id] || [] : []}
-          onBookUpdate={handleBookUpdate} // ← Asegúrate de que esta línea existe
+          onBookUpdate={handleBookUpdate}
           refreshData={fetchBooks}
+        />
+
+        {/* Modal del analizador de texto */}
+        <BookTextAnalyzerModal
+          isOpen={showAnalyzer}
+          onClose={() => setShowAnalyzer(false)}
+          onBookSelect={handleAnalyzerBookSelect}
+          genresOptions={genresOptions}
+          authorsOptions={authorsOptions}
+          seriesOptions={seriesOptions}
+          setGenresOptions={setGenresOptions}
+          setAuthorsOptions={setAuthorsOptions}
+          setSeriesOptions={setSeriesOptions}
+          onOpenAddBook={handleAnalyzerBookSelect}
         />
 
         {filteredBooks.length === 0 && (

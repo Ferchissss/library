@@ -22,13 +22,19 @@
   interface AddBookModalProps {
     trigger?: React.ReactNode
     refreshData?: () => void
+    isOpen?: boolean
+    onOpenChange?: (open: boolean) => void
+    prefilledData?: any
   }
 
-  export function AddBookModal({ trigger, refreshData }: AddBookModalProps) {
-    const [isOpen, setIsOpen] = useState(false)
+  export function AddBookModal({ trigger, refreshData, isOpen: externalIsOpen, onOpenChange: externalOnOpenChange, prefilledData  }: AddBookModalProps) {
+    const [internalIsOpen, setInternalIsOpen] = useState(false)
     const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(false) 
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [loadingOptions, setLoadingOptions] = useState(false)
+    const isControlled = externalIsOpen !== undefined
+    const isOpen = isControlled ? externalIsOpen : internalIsOpen
+    const setIsOpen = isControlled ? (externalOnOpenChange || (() => {})) : setInternalIsOpen
 
     // Estados para las opciones de los selectores
     const [authorsOptions, setAuthorsOptions] = useState<{ value: string; label: string; id?: number }[]>([])
@@ -88,7 +94,17 @@
     })
     // Hook para el parseo de datos masivos
     const { processBulkData } = useBulkDataParser({ genresOptions, authorsOptions, seriesOptions, setGenresOptions, setAuthorsOptions, setSeriesOptions  })
-
+    // Efecto para cargar datos prefilled cuando el modal se abre
+    useEffect(() => {
+      if (isOpen && prefilledData) {
+        setFormData(prev => ({
+          ...prev,
+          ...prefilledData,
+          genres: Array.isArray(prefilledData.genres) ? prefilledData.genres : [],
+          mainCharacters: Array.isArray(prefilledData.mainCharacters) ? prefilledData.mainCharacters : [],
+        }))
+      }
+    }, [isOpen, prefilledData])
     // Cargar opciones al abrir el modal
     useEffect(() => {
       const fetchOptions = async () => {
@@ -217,20 +233,20 @@
         return
       }
       // Si no hay authorId pero sí hay autor, intentar encontrarlo nuevamente
-  if (!formData.authorId && formData.author) {
-    const foundAuthor = authorsOptions.find(a => a.value === formData.author)
-    if (foundAuthor?.id) {
-      setFormData(prev => ({ ...prev, authorId: foundAuthor.id }))
-    }
-  }
+      if (!formData.authorId && formData.author) {
+        const foundAuthor = authorsOptions.find(a => a.value === formData.author)
+        if (foundAuthor?.id) {
+          setFormData(prev => ({ ...prev, authorId: foundAuthor.id }))
+        }
+      }
 
-  // Si no hay seriesId pero sí hay serie, intentar encontrarla nuevamente
-  if (!formData.seriesId && formData.series) {
-    const foundSeries = seriesOptions.find(s => s.value === formData.series)
-    if (foundSeries?.id) {
-      setFormData(prev => ({ ...prev, seriesId: foundSeries.id }))
-    }
-  }
+      // Si no hay seriesId pero sí hay serie, intentar encontrarla nuevamente
+      if (!formData.seriesId && formData.series) {
+        const foundSeries = seriesOptions.find(s => s.value === formData.series)
+        if (foundSeries?.id) {
+          setFormData(prev => ({ ...prev, seriesId: foundSeries.id }))
+        }
+      }
 
       // Verificar que tenemos todos los IDs de géneros
       if (formData.genres.length !== formData.genreIds.length) {
