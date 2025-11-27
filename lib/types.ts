@@ -2,12 +2,14 @@ export type Author = {
   id: number
   name: string
   nationality?: string
+  continent?: string
   birth_year?: number
   death_year?: number
   gender?: string
   literary_genre?: string
   biography?: string
   awards?: string
+  img_url?: string  // <- NUEVO CAMPO AQUÍ
 }
 
 export type Series = {
@@ -18,6 +20,7 @@ export type Series = {
 export type Genre = {
   id: number
   name: string
+  description?: string
 }
 
 export type Book = {
@@ -65,7 +68,11 @@ export type Quote = {
 export type Challenge = {
   id: number
   name: string
+  icon_name?: string     
   description?: string
-  start_date?: string
-  end_date?: string
+  goal_value?: number
+  unit?: string
+  year?: number
+  rule_description?: string
+  query_sql?: string
 }

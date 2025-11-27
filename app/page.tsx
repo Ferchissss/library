@@ -1,7 +1,6 @@
 "use client"
-
 import { useState, useEffect } from 'react'
-import { Book as BookIcon, BookOpen, Star, TrendingUp, Search, Calendar, SortDesc, SortAsc, User, Library, RefreshCw } from "lucide-react"
+import { Book as BookIcon, BookOpen, Star, Search, SortDesc, SortAsc, User, Library, RefreshCw, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,46 +9,31 @@ import { useViewMode } from "@/components/view-mode-provider"
 import { BookCard } from "@/components/book-card"
 import { BookTable } from "@/components/book-table"
 import { ViewModeToggle } from "@/components/view-mode-toggle"
-import { Badge } from "@/components/ui/badge"
 import { AddBookModal } from "@/components/add-book-modal"
 import { supabase } from '@/lib/supabaseClient';
 import type { Book, Quote  } from "@/lib/types"  
 import { BookDetailsModal } from '@/components/book-details-modal'
 import { BookSearchButton } from '@/components/book-search-button'
 import { BookTextAnalyzerModal } from '@/components/text-analyzer-modal'
-import { useBulkDataParser } from '@/hooks/useBulkDataParser'
-import { transformToAddBookFormat } from '@/lib/bookDataTransformers'
 
 export default function HomePage() {
   const { viewMode } = useViewMode()
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedGenre, setSelectedGenre] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [selectedFavorites, setSelectedFavorites] = useState("all")
   const [sortBy, setSortBy] = useState("default")
   const [books, setBooks] = useState<Book[]>([])
   const [quotesMap, setQuotesMap] = useState<Record<number, Quote[]>>({})
   const [loading, setLoading] = useState(true)
-  const [showSearch, setShowSearch] = useState(false)
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [showAnalyzer, setShowAnalyzer] = useState(false)
   const [showAddBook, setShowAddBook] = useState(false)
   const [prefilledData, setPrefilledData] = useState<any>(null)
   
-  // Estados para las opciones (necesarios para el analizador)
+  // States for options (needed for the analyzer)
   const [authorsOptions, setAuthorsOptions] = useState<{ value: string; label: string; id?: number }[]>([])
   const [genresOptions, setGenresOptions] = useState<{ value: string; label: string; id?: number }[]>([])
   const [seriesOptions, setSeriesOptions] = useState<{ value: string; label: string; id?: number }[]>([])
-
-  // Inicializar el hook de procesamiento de datos
-  const { processAnalyzedData } = useBulkDataParser({
-    genresOptions,
-    authorsOptions,
-    seriesOptions,
-    setGenresOptions,
-    setAuthorsOptions,
-    setSeriesOptions
-  })
 
   const [statsData, setStatsData] = useState({
     totalBooks: 0,
@@ -58,17 +42,17 @@ export default function HomePage() {
     averageRating: 0,
   })
 
-  // Función para cargar las opciones necesarias para el analizador
+  // Function to load the options needed for the analyzer
   const fetchOptions = async () => {
     try {
-      // Autores
+      // Authors
       const { data: authors } = await supabase
         .from("authors")
         .select("id, name")
         .order("name", { ascending: true })
       setAuthorsOptions(authors?.map((a) => ({ value: a.name, label: a.name, id: a.id })) || [])
 
-      // Géneros
+      // Genres
       const { data: genres } = await supabase
         .from("genres")
         .select("id, name")
@@ -86,7 +70,7 @@ export default function HomePage() {
     }
   }
 
-  // Función para cargar los libros desde Supabase
+  // Function to load books from Supabase
   const fetchBooks = async () => {
     try {
       setLoading(true)
@@ -97,14 +81,14 @@ export default function HomePage() {
       
       if (error) throw error
       
-      // Obtener citas
+      // Get quotes
       const { data: quotesData, error: quotesError } = await supabase
         .from('quotes')
         .select('*')
       
       if (quotesError) throw quotesError
       
-      // Crear el mapa de citas
+      // Create the quotes map
       const quotesMap = quotesData?.reduce((acc, quote) => {
         if (quote.book_id) {
           if (!acc[quote.book_id]) {
@@ -126,7 +110,7 @@ export default function HomePage() {
     }
   }
 
-  // Función para calcular estadísticas
+  // Function to calculate statistics
   const calculateStats = (books: Book[]) => {
     const currentYear = new Date().getFullYear()
     
@@ -145,38 +129,38 @@ export default function HomePage() {
     setStatsData(stats)
   }
    
-  // Función para manejar la selección de libro
+  // Function to handle book selection
   const handleBookSelect = (book: Book) => {
     setSelectedBook(book)
   }
 
-  // Función para actualizar libros
+  // Function to update books
   const handleBookUpdate = (updatedBook: Book) => {
     setBooks(prevBooks => 
       prevBooks.map(book => 
         book.id === updatedBook.id ? updatedBook : book
       )
     )
-    // Si el libro actualizado es el seleccionado, actualizarlo también
+    // If the updated book is the selected one, update it too
     if (selectedBook && selectedBook.id === updatedBook.id) {
       setSelectedBook(updatedBook)
     }
   }
 
-  // Función para manejar selección desde búsqueda
+  // Function to handle selection from search
   const handleSearchBookSelect = (book: any) => {
-    console.log('Libro seleccionado desde búsqueda:', book)
+    console.log('Book selected from search:', book)
   }
 
-  // Función para manejar la selección desde el analizador de texto
+  // Function to handle selection from text analyzer
   const handleAnalyzerBookSelect = async (bookData: any) => {
-    // 🎯 USAR DIRECTAMENTE LOS DATOS SIN PROCESAMIENTO EXTRA
+    // 🎯 USE DATA DIRECTLY WITHOUT EXTRA PROCESSING
     setPrefilledData(bookData)
     setShowAnalyzer(false)
     setShowAddBook(true)
   }
 
-  // Cargar libros y opciones al montar el componente
+  // Load books and options when component mounts
   useEffect(() => {
     fetchBooks()
     fetchOptions()
@@ -208,245 +192,327 @@ export default function HomePage() {
           return (b.pages ?? 0) - (a.pages ?? 0)
         case "pages-asc":
           return (a.pages ?? 0) - (b.pages ?? 0)
-        case "orden-asc":
+        case "order-asc":
           return a.orden - b.orden 
         default:  
           return b.orden - a.orden 
       }
     })
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#f8f3fc" }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-purple-800">Cargando tu biblioteca...</p>
+    if (loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-v50">
+          <div className="text-center">
+            <div className="loading h-12 w-12 border-t-2 border-v500 mx-auto mb-4"></div>
+            <p className="text">Loading your library...</p>
+          </div>
         </div>
-      </div>
-    )
-  }
+      )
+    }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#f8f3fc" }}>
-      <div className="container mx-auto px-4 py-8">
-        {/* Header with Add Book Button */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-purple-800">Mi Biblioteca</h1>
-            <p className="text-purple-600">Gestiona y explora tu colección personal de libros</p>
+    <div className="min-h-screen bg-v50">
+      {/* Container with responsive padding */}
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8">
+        {/* Header with Add Book Button - Responsive layout */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+          <div className="flex-1 min-w-0">
+            <h1 className="title text-2xl sm:text-3xl lg:text-4xl">My Library</h1>
+            <p className="text-v600 text-sm sm:text-base">Manage and explore your personal book collection</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto justify-start sm:justify-end">
             <BookSearchButton onBookSelect={handleSearchBookSelect} />
             <Button
               onClick={fetchBooks}
               disabled={loading}
               variant="outline"
-              className="border-purple-300 text-purple-600 hover:bg-purple-100 hover:text-purple-700 transition-all duration-200 px-2 py-1 text-sm rounded-md bg-transparent"
+              className="button-tran h-9 sm:h-10"
             >
-              <RefreshCw
-                className={`h-3 w-3 ${loading ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? "animate-spin" : ""}`}/>
             </Button>
             <Button
               onClick={() => setShowAnalyzer(true)}
               variant="outline"
-              className="border-purple-300 text-purple-600 hover:bg-purple-100 hover:text-purple-700 transition-all duration-200"
+              className="button-tran h-9 sm:h-10"
             >
-              <BookOpen className="h-4 w-4 mr-2" />
-              Analizar Texto
+              <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="text-xs sm:text-sm">Analyze Text</span>
             </Button>
-            <AddBookModal 
-              refreshData={fetchBooks}
-              isOpen={showAddBook}
-              onOpenChange={setShowAddBook}
-              prefilledData={prefilledData}
-            />
+            <Button
+              onClick={() => setShowAddBook(true)}
+              className="button1 h-9 sm:h-10"
+            >
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="text-xs sm:text-sm">Add Book</span>
+            </Button>
           </div>
         </div>
 
-        {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 px-3 pt-2">
-              <CardTitle className="text-sm font-medium text-purple-700">Libros Leídos</CardTitle>
-              <BookIcon className="h-4 w-4 text-purple-600" />
+        {/* Dashboard Stats - Responsive grid */}
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-2">
+          <Card className="card">
+            <CardHeader className="card-header">
+              <CardTitle className="card-title text-sm sm:text-base">Books Read</CardTitle>
+              <BookIcon className="icon h-4 w-4 sm:h-5 sm:w-5" />
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <div className="text-xl font-bold text-purple-800">{statsData.totalBooks}</div>
-              <p className="text-xs text-purple-600">+{statsData.booksThisYear} este año</p>
+              <div className="card-div text-xl sm:text-2xl">{statsData.totalBooks}</div>
+              <p className="card-p text-xs sm:text-sm">+{statsData.booksThisYear} this year</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 px-3 pt-2">
-              <CardTitle className="text-sm font-medium text-purple-700">Páginas Leídas</CardTitle>
-              <BookOpen className="h-4 w-4 text-purple-600" />
+          <Card className="card">
+            <CardHeader className="card-header">
+              <CardTitle className="card-title text-sm sm:text-base">Pages Read</CardTitle>
+              <BookOpen className="icon h-4 w-4 sm:h-5 sm:w-5" />
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <div className="text-xl font-bold text-purple-800">{statsData.totalPages.toLocaleString()}</div>
-              <p className="text-xs text-purple-600">
-                Promedio: {Math.round(statsData.totalPages / statsData.totalBooks)} por libro
+              <div className="card-div text-xl sm:text-2xl">{statsData.totalPages.toLocaleString()}</div>
+              <p className="card-p text-xs sm:text-sm">
+                Average: {Math.round(statsData.totalPages / statsData.totalBooks)} per book
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 px-3 pt-2">
-              <CardTitle className="text-sm font-medium text-purple-700">Calificación Promedio</CardTitle>
-              <Star className="h-4 w-4 text-purple-600" />
+          <Card className="card">
+            <CardHeader className="card-header">
+              <CardTitle className="card-title text-sm sm:text-base">Average Rating</CardTitle>
+              <Star className="icon h-4 w-4 sm:h-5 sm:w-5" />
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <div className="text-xl font-bold text-purple-800">{statsData.averageRating}</div>
-              <p className="text-xs text-purple-600">de 10 puntos</p>
+              <div className="card-div text-xl sm:text-2xl">{statsData.averageRating}</div>
+              <p className="card-p text-xs sm:text-sm">out of 10 points</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters and Search - Redesigned */}
-        <div className="mb-8 space-y-4">
-          {/* Filters + Search Row */}
-          <div className="flex flex-col sm:flex-row flex-wrap gap-4 items-center justify-between">
-            {/* Search Bar */}
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-500 z-10 pointer-events-none" />
-              <Input
-                placeholder="Buscar por título"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-9 bg-white/30 text-gray-700 backdrop-blur-md border border-purple-300/30 rounded-2xl placeholder:text-gray-500"              />
-            </div>
+        {/* Filters and Search - Responsive layout */}
+        <div className="mb-0 space-y-4">
+          {/* En móvil: dos filas separadas */}
+          <div className="sm:hidden space-y-3">
+            {/* Primera fila móvil: Search y View Toggle */}
+            <div className="flex gap-3 items-center">
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-v500 z-10 pointer-events-none" />
+                <Input
+                  placeholder="Search by title"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 bg-white/30 text-gray-700 backdrop-blur-md border bordes rounded-xl placeholder:text-gray-500 text-sm"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-v500 hover:text-v700"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3 items-center">
-              {/* Favoritos */}
-              <Select value={selectedFavorites} onValueChange={setSelectedFavorites}>
-                <SelectTrigger className="h-9 text-sm bg-white/30 text-gray-700 backdrop-blur-md border border-purple-300/30 rounded-2xl px-4 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-300 w-48">
-                  <SelectValue placeholder="Favoritos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    <Library className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    Todos los libros
-                  </SelectItem>
-                  <SelectItem value="favorites">
-                    <Star className="inline-block w-4 h-4 mr-2 text-purple-500 fill-purple-500" />
-                    Solo favoritos
-                  </SelectItem>
-                  <SelectItem value="non-favorites">
-                    <Library className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    No favoritos
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Ordenar por */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-9 text-sm bg-white/30 text-gray-700 backdrop-blur-md border border-purple-300/30 rounded-2xl px-4 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-300 w-48">
-                  <SelectValue placeholder="Ordenar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">
-                    <SortDesc className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    Orden (Mayor a menor)
-                  </SelectItem>
-                  <SelectItem value="orden-asc">
-                    <SortAsc className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    Orden (Menor a mayor)
-                  </SelectItem>
-                  <SelectItem value="rating-desc">
-                    <SortDesc className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    Calificación (Mayor)
-                  </SelectItem>
-                  <SelectItem value="rating-asc">
-                    <SortAsc className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    Calificación (Menor)
-                  </SelectItem>
-                  <SelectItem value="title">
-                    <BookOpen className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    Título (A-Z)
-                  </SelectItem>
-                  <SelectItem value="author">
-                    <User className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    Autor (A-Z)
-                  </SelectItem>
-                  <SelectItem value="pages-desc">
-                    <SortDesc className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    Páginas (Mayor)
-                  </SelectItem>
-                  <SelectItem value="pages-asc">
-                    <SortAsc className="inline-block w-4 h-4 mr-2 text-purple-500" />
-                    Páginas (Menor)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* View Toggle */}
-            <div className="w-full sm:w-auto">
+              {/* View Toggle */}
               <ViewModeToggle />
+            </div>
+
+            {/* Segunda fila móvil: Filtros en grid de 2 columnas */}
+            <div className="grid grid-cols-2 gap-3 w-full">
+              {/* Favorites */}
+              <div className="w-full">
+                <Select value={selectedFavorites} onValueChange={setSelectedFavorites}>
+                  <SelectTrigger className="setrigger h-9 text-sm w-full max-w-full">
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="select-item text-sm">
+                      <Library className="icons h-3 w-3" />
+                      All books
+                    </SelectItem>
+                    <SelectItem value="favorites" className="select-item text-sm">
+                      <Star className="icons h-3 w-3 fill-purple-500" />
+                      Only favorites
+                    </SelectItem>
+                    <SelectItem value="non-favorites" className="select-item text-sm">
+                      <Library className="icons h-3 w-3" />
+                      Not favorites
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sort by */}
+              <div className="w-full">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="setrigger h-9 text-sm w-full max-w-full">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default" className="select-item text-sm">
+                      <SortDesc className="icons h-3 w-3" />
+                      Order (High to low)
+                    </SelectItem>
+                    <SelectItem value="order-asc" className="select-item text-sm">
+                      <SortAsc className="icons h-3 w-3" />
+                      Order (Low to high)
+                    </SelectItem>
+                    <SelectItem value="rating-desc" className="select-item text-sm">
+                      <SortDesc className="icons h-3 w-3" />
+                      Rating (Highest)
+                    </SelectItem>
+                    <SelectItem value="rating-asc" className="select-item text-sm">
+                      <SortAsc className="icons h-3 w-3" />
+                      Rating (Lowest)
+                    </SelectItem>
+                    <SelectItem value="title" className="select-item text-sm">
+                      <BookOpen className="icons h-3 w-3" />
+                      Title (A-Z)
+                    </SelectItem>
+                    <SelectItem value="author" className="select-item text-sm">
+                      <User className="icons h-3 w-3" />
+                      Author (A-Z)
+                    </SelectItem>
+                    <SelectItem value="pages-desc" className="select-item text-sm">
+                      <SortDesc className="icons h-3 w-3" />
+                      Pages (Most)
+                    </SelectItem>
+                    <SelectItem value="pages-asc" className="select-item text-sm">
+                      <SortAsc className="icons h-3 w-3" />
+                      Pages (Least)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
-          {/* Active Filters */}
-          {(selectedFavorites !== "all" || selectedStatus !== "all" || sortBy !== "default" || searchTerm) && (
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-sm text-muted-foreground">Filtros activos:</span>
+          {/* En desktop: layout original (no tocar) */}
+          <div className="hidden sm:flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-center justify-between">
+            {/* Search Bar */}
+            <div className="relative w-full sm:w-64 order-1 sm:order-1">
+              <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-v500 z-10 pointer-events-none" />
+              <Input
+                placeholder="Search by title"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 sm:pl-12 h-9 bg-white/30 text-gray-700 backdrop-blur-md border bordes rounded-xl sm:rounded-2xl placeholder:text-gray-500 text-sm"
+              />
               {searchTerm && (
-                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                  Búsqueda: "{searchTerm}"
-                </Badge>
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-v500 hover:text-v700"
+                >
+                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
               )}
-              {selectedFavorites !== "all" && (
-                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                  {selectedFavorites === "favorites" ? "⭐ Favoritos" : "📚 No favoritos"}
-                </Badge>
-              )}
-              {selectedStatus !== "all" && (
-                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                  {selectedStatus === "completed" ? "✅ Completados" : "📖 Leyendo"}
-                </Badge>
-              )}
-              {sortBy !== "default" && (
-                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                  Ordenado por:{" "}
-                  {sortBy.includes("rating")
-                    ? "Calificación"
-                    : sortBy.includes("title")
-                      ? "Título"
-                      : sortBy.includes("author")
-                        ? "Autor"
-                        : "Páginas"}
-                </Badge>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchTerm("")
-                  setSelectedFavorites("all")
-                  setSelectedStatus("all")
-                  setSortBy("default")
-                }}
-                className="h-6 px-2 text-xs text-muted-foreground hover:text-red-600"
-              >
-                Limpiar filtros
-              </Button>
             </div>
-          )}
-        </div>
 
-        {/* Books Display */}
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 sm:gap-3 items-center order-3 sm:order-2 w-full sm:w-auto justify-center sm:justify-start">
+              {/* Favorites */}
+              <Select value={selectedFavorites} onValueChange={setSelectedFavorites}>
+                <SelectTrigger className="setrigger h-9 text-sm">
+                  <SelectValue/>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="select-item text-sm">
+                    <Library className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    All books
+                  </SelectItem>
+                  <SelectItem value="favorites" className="select-item text-sm">
+                    <Star className="icons h-3 w-3 sm:h-4 sm:w-4 fill-purple-500" />
+                    Only favorites
+                  </SelectItem>
+                  <SelectItem value="non-favorites" className="select-item text-sm">
+                    <Library className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    Not favorites
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Sort by */}
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="setrigger h-9 text-sm">
+                  <SelectValue/>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default" className="select-item text-sm">
+                    <SortDesc className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    Order (High to low)
+                  </SelectItem>
+                  <SelectItem value="order-asc" className="select-item text-sm">
+                    <SortAsc className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    Order (Low to high)
+                  </SelectItem>
+                  <SelectItem value="rating-desc" className="select-item text-sm">
+                    <SortDesc className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    Rating (Highest)
+                  </SelectItem>
+                  <SelectItem value="rating-asc" className="select-item text-sm">
+                    <SortAsc className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    Rating (Lowest)
+                  </SelectItem>
+                  <SelectItem value="title" className="select-item text-sm">
+                    <BookOpen className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    Title (A-Z)
+                  </SelectItem>
+                  <SelectItem value="author" className="select-item text-sm">
+                    <User className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    Author (A-Z)
+                  </SelectItem>
+                  <SelectItem value="pages-desc" className="select-item text-sm">
+                    <SortDesc className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    Pages (Most)
+                  </SelectItem>
+                  <SelectItem value="pages-asc" className="select-item text-sm">
+                    <SortAsc className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                    Pages (Least)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Clear filters button */}
+              {(selectedFavorites !== "all" || sortBy !== "default" || searchTerm) && (
+                <Button
+                  onClick={() => {
+                    setSelectedFavorites("all")
+                    setSortBy("default")
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 text-sm bg-white/30 backdrop-blur-md border border-purple-300/30 rounded-xl sm:rounded-2xl"
+                >
+                  <X className="icons h-3 w-3 sm:h-4 sm:w-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* View Toggle */}
+            <div className="w-full sm:w-auto order-2 sm:order-3">
+              <ViewModeToggle />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Books Display */}
+      <div className="px-3 sm:px-4 lg:px-6 xl:px-10">
         {viewMode === "cards" ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4 lg:gap-6">
             {filteredBooks.map((book) => (
               <BookCard key={book.id} book={book} />
             ))}
           </div>
         ) : (
-          <BookTable books={filteredBooks} quotesMap={quotesMap} refreshData={fetchBooks} onBookSelect={handleBookSelect} onBookUpdate={handleBookUpdate}/>
+          <BookTable
+            books={filteredBooks}
+            quotesMap={quotesMap}
+            refreshData={fetchBooks}
+            onBookSelect={handleBookSelect}
+            onBookUpdate={handleBookUpdate}
+          />
         )}
 
-        {/* Modal de detalles del libro */}
+        {/* Book details modal */}
         <BookDetailsModal 
           book={selectedBook}
           isOpen={!!selectedBook}
@@ -456,7 +522,7 @@ export default function HomePage() {
           refreshData={fetchBooks}
         />
 
-        {/* Modal del analizador de texto */}
+        {/* Text analyzer modal */}
         <BookTextAnalyzerModal
           isOpen={showAnalyzer}
           onClose={() => setShowAnalyzer(false)}
@@ -469,14 +535,20 @@ export default function HomePage() {
           setSeriesOptions={setSeriesOptions}
           onOpenAddBook={handleAnalyzerBookSelect}
         />
+        <AddBookModal 
+          refreshData={fetchBooks}
+          isOpen={showAddBook}
+          onOpenChange={setShowAddBook}
+          prefilledData={prefilledData}
+        />
 
         {filteredBooks.length === 0 && (
-          <Card className="text-center py-12 bg-white/60 backdrop-blur-sm border-0">
+          <Card className="text-center py-8 sm:py-12 bg-white/60 backdrop-blur-sm border-0 mx-3 sm:mx-0">
             <CardContent>
-              <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No se encontraron libros</h3>
-              <p className="text-muted-foreground">
-                Intenta ajustar tus filtros de búsqueda o agrega un nuevo libro a tu biblioteca.
+              <BookOpen className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-semibold mb-2">No books found</h3>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                Try adjusting your search filters or add a new book to your library.
               </p>
             </CardContent>
           </Card>

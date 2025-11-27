@@ -10,6 +10,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        v50:  'var(--v50)',
+        v100: 'var(--v100)',
+        v200: 'var(--v200)',
+        v300: 'var(--v300)',
+        v400: 'var(--v400)',
+        v500: 'var(--v500)',
+        v600: 'var(--v600)',
+        v700: 'var(--v700)',
+        v800: 'var(--v800)',
+        v900: 'var(--v900)',
+        vA100: 'var(--vA100)',
+        vA200: 'var(--vA200)',
+        vA400: 'var(--vA400)',
+        vA700: 'var(--vA700)',
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

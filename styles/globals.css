@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -42,17 +46,23 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    --color-amber-800: #92400e;
-    --color-orange-800: #9a3412;
-    --color-yellow-800: #854d0e;
-    --color-green-800: #166534;
-    --color-blue-800: #1e40af;
-    --color-purple-800: #6b21a8;
-    --color-pink-800: #9d174d;
-    --color-red-800: #991b1b;
-    --color-gray-700: #374151;
-    --color-gray-300: #d1d5db;
+    --sidebar-ring: 217.2 91.2% 59.8%; /*indigo, pink o teal*/
+    --v50:  #faf5ff; /*bg*/
+    --v100: #f3e8ff;
+    --v200: #e9d5ff; /*borde, */
+    --v300: #d8b4fe;
+    --v400: #c084fc;
+    --v500: #a855f7; /*loading, icono*/
+    --v600: #9333ea;
+    --v700: #7e22ce;
+    --v800: #6b21a8;
+    --v900: #581c87;
+
+    --vA100: #EA80FC;
+    --vA200: #E040FB;
+    --vA400: #D500F9;
+    --vA700: #AA00FF;
+
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -97,4 +107,133 @@
   body {
     @apply bg-background text-foreground;
   }
+  .text {
+    @apply text-v800;
+  }
+  .fondo {
+    @apply bg-v50;
+  }
+  .title {
+    @apply font-serif font-bold text-3xl text-v900 mb-2 !important;
+  }
+  .title2 {
+    @apply text-v600 font-sans;
+  }
+  .button1 {
+    @apply flex-1 bg-gradient-to-r from-v600 to-v800 hover:from-v700 hover:to-v900 text-white shadow-md transition-all duration-200 disabled:opacity-50;
+  }
+  .button2 {
+    @apply bg-v600 hover:bg-v700 !important;
+  }
+  .button-tran {
+    @apply border-v300 text-v600 hover:bg-v100 hover:text-v700 transition-all duration-200 bg-transparent !important;
+  }
+  .button-tran2 {
+    @apply border-v200 text-v700 hover:bg-v50 !important;
+  }
+  .loading {
+    @apply animate-spin rounded-full border-b-2;
+  }
+  .bordes {
+    @apply border-v200;
+  }
+  /*ADD BOOK*/
+  .label {
+    @apply text-v700 font-medium w-24 text-right;
+  }
+  .input {
+    @apply border-v200 focus:border-v400 flex-1 h-6 py-1 text-sm !important;
+  }
+  .selectrigger {
+    @apply h-6 min-h-6 py-0 border-v200 bg-v50 text-v700 rounded-md shadow-sm hover:bg-v100 transition-all !important;
+  }
+  .select-content {
+    @apply bg-white shadow-lg rounded-md border border-purple-100;
+  }
+  /*SEARCH*/
+  .btn-author {
+    @apply flex-shrink-0 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm;
+  }
+  .btn-cover {
+    @apply w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200;
+  }
+  .tab {
+    @apply flex items-center gap-2 px-4 py-2 font-medium transition-colors text-sm !important;
+  }
+  /*HOME*/
+  .card {
+    @apply bg-white/80 backdrop-blur-sm border-0 shadow-md;
+  }
+  .card-header {
+    @apply flex flex-row items-center justify-between space-y-0 pb-1 px-3 pt-2 !important;
+  }
+  .card-title {
+    @apply text-sm font-medium text-v700 !important;
+  }
+  .icon {
+    @apply h-4 w-4 text-v600;
+  }
+  .card-div {
+    @apply text-xl font-bold text-v800;
+  }
+  .card-p {
+    @apply text-xs text-v600;
+  }
+  .setrigger{
+    @apply h-9 text-sm bg-white/30 text-gray-700 backdrop-blur-md border border-purple-300/30 rounded-2xl px-4 
+    focus:outline-none focus:ring-2 focus:ring-v300 transition-all duration-300 w-48 !important;
+  }
+  .icons{
+    @apply inline-block w-4 h-4 mr-2 text-v500;
+  }
+  .select-item {
+    @apply hover:bg-v100 transition-all duration-200;
+  }
+
+}
+/* styles/globals.css */
+/* En tu archivo global CSS */
+.vis-timeline {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px;
+  font-family: inherit !important;
+}
+
+.vis-item {
+  border-radius: 6px !important;
+  border: 2px solid !important;
+  font-weight: 500;
+}
+
+.vis-item.vis-range {
+  background-color: #ec4899 !important;
+  border-color: #be185d !important;
+}
+
+.vis-item.vis-range .vis-item-content {
+  color: white;
+  padding: 2px 4px;
+}
+
+.vis-panel.vis-center, 
+.vis-panel.vis-left, 
+.vis-panel.vis-right {
+  border-color: #e5e7eb !important;
+}
+
+.vis-grid.vis-minor {
+  border-color: #f3f4f6 !important;
+}
+
+.vis-grid.vis-major {
+  border-color: #e5e7eb !important;
+}
+
+.vis-text {
+  color: #6b7280 !important;
+  font-weight: 500;
+}
+
+.vis-time-axis .vis-text {
+  font-size: 12px;
 }

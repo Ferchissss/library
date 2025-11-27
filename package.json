@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",
@@ -62,9 +63,11 @@
     "recharts": "latest",
     "remark-gfm": "^4.0.1",
     "sonner": "latest",
-    "tailwind-merge": "^2.5.5",
+    "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "latest",
+    "vis-data": "^8.0.3",
+    "vis-timeline": "^8.4.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
