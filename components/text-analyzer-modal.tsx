@@ -55,7 +55,7 @@ export function BookTextAnalyzerModal({
   const [analyzedData, setAnalyzedData] = useState<BookData | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
-  // Inicializar el hook de procesamiento de datos
+  // Initialize data processing hook
   const { processBulkData, convertToBulkDataFormat   } = useBulkDataParser({
     genresOptions,
     authorsOptions,
@@ -68,7 +68,7 @@ export function BookTextAnalyzerModal({
   const analyzeText = (text: string): BookData => {
     const lines = text.split('\n').filter(line => line.trim())
     
-    // Inicializar objeto con valores por defecto
+    // Initialize object with default values
     const bookData: BookData = {
       title: '',
       author: '',
@@ -83,7 +83,7 @@ export function BookTextAnalyzerModal({
     lines.forEach((line, index) => {
       const trimmedLine = line.trim()
 
-      // Detectar secciones (con return para evitar procesamiento múltiple)
+      // Detect sections (with return to avoid multiple processing)
       if (trimmedLine.toLowerCase() === 'genres' || trimmedLine.toLowerCase().includes('show all')) {
         currentSection = 'genres'
         isInDescription = false
@@ -92,7 +92,7 @@ export function BookTextAnalyzerModal({
       if (trimmedLine.toLowerCase().includes('first published')) {
         currentSection = 'publication'
         isInDescription = false
-        // NO hacer return - procesar esta línea
+        // DON'T return - process this line
       }
       if (trimmedLine.toLowerCase().includes('literary awards')) {
         currentSection = 'awards'
@@ -123,14 +123,14 @@ export function BookTextAnalyzerModal({
         return
       }
 
-      // Detectar páginas - en cualquier sección EXCEPTO 'edition'
+      // Detect pages - in any section EXCEPT 'edition'
       if (currentSection !== 'edition' && trimmedLine.match(/^\d+\s*pages/)) {
         currentSection = 'details'
         isInDescription = false
-        // Continuar para procesar esta línea en el switch
+        // Continue to process this line in the switch
       }
 
-      // Detectar inicio de descripción (después de rating/reviews) - pero la ignoramos
+      // Detect start of description (after rating/reviews) - but we ignore it
       if (!isInDescription && 
           (trimmedLine.match(/^\d+\.\d+/) || 
            trimmedLine.match(/[\d,]+ ratings/) ||
@@ -140,16 +140,16 @@ export function BookTextAnalyzerModal({
         return
       }
 
-      // Procesar según la sección actual
+      // Process according to current section
       switch (currentSection) {
         case '':
           if (isInDescription) {
-            // Ignorar líneas de descripción
+            // Ignore description lines
             return
           } else {
-            // Líneas iniciales - título, autor
+            // Initial lines - title, author
             if (!bookData.title && trimmedLine && !trimmedLine.includes('#') && !trimmedLine.match(/^\d/)) {
-              // Verificar si es serie (línea anterior puede tener #)
+              // Check if it's a series (previous line may have #)
               if (index > 0 && lines[index-1].trim().includes('#')) {
                 bookData.series = lines[index-1].trim().replace(/#\d+/, '').trim()
                 bookData.title = trimmedLine
@@ -157,7 +157,7 @@ export function BookTextAnalyzerModal({
                 bookData.title = trimmedLine
               }
             } else if (trimmedLine.includes('#')) {
-              // Solo guardar el nombre de la serie sin el número
+              // Only save series name without the number
               const seriesMatch = trimmedLine.match(/(.+?)\s*#\d+/)
               if (seriesMatch) {
                 bookData.series = seriesMatch[1].trim()
@@ -165,12 +165,12 @@ export function BookTextAnalyzerModal({
             } else if (!bookData.author && trimmedLine && !trimmedLine.match(/^\d/) && 
                       !trimmedLine.includes('ratings') && !trimmedLine.includes('reviews') &&
                       trimmedLine !== bookData.title) {
-              // Ignorar ilustradores y solo capturar autor principal
+              // Ignore illustrators and only capture main author
               if (!trimmedLine.includes('(Illustrator)') && !trimmedLine.startsWith(',') && trimmedLine !== '') {
                 bookData.author = trimmedLine
               }
             }
-            // Ignorar líneas de rating/calificación
+            // Ignore rating lines
           }
           break
 
@@ -189,22 +189,22 @@ export function BookTextAnalyzerModal({
           break
 
         case 'details':
-          // Buscar páginas con formato flexible
+          // Search for pages with flexible format
           const pagesMatch = trimmedLine.match(/(\d+)\s*pages/)
           if (pagesMatch) {
             bookData.pages = parseInt(pagesMatch[1])
           }
-          // Solo resetear si realmente procesamos páginas
+          // Only reset if we actually processed pages
           if (trimmedLine.includes('pages')) {
             currentSection = ''
           }
           break
 
         case 'publication':
-          // Buscar fecha de publicación y extraer solo el año
+          // Search for publication date and extract only the year
           const yearMatch = trimmedLine.match(/(\d{4})/)
           if (yearMatch) {
-            bookData.publishedDate = yearMatch[1] // Solo el año
+            bookData.publishedDate = yearMatch[1] // Only the year
           }
           break
 
@@ -221,7 +221,7 @@ export function BookTextAnalyzerModal({
         case 'series':
           const seriesMatch = trimmedLine.match(/Series\s*(.+)/)
           if (seriesMatch) {
-            // Remover el número # si existe
+            // Remove the # number if it exists
             bookData.series = seriesMatch[1].replace(/#\d+/, '').trim()
           }
           break
@@ -242,7 +242,7 @@ export function BookTextAnalyzerModal({
           break
 
         case 'edition':
-          // 1. Buscar editorial en formato "by Publisher"
+          // 1. Search for publisher in "by Publisher" format
           if (trimmedLine.includes('by ') && !bookData.publisher) {
             const publisherMatch = trimmedLine.match(/by\s+(.+)$/)
             if (publisherMatch) {
@@ -250,7 +250,7 @@ export function BookTextAnalyzerModal({
             }
           }
           
-          // 2. Buscar editorial en formato "Published Publisher"
+          // 2. Search for publisher in "Published Publisher" format
           else if (trimmedLine.includes('Published') && !bookData.publisher && !trimmedLine.includes('First published')) {
             const publisherMatch = trimmedLine.match(/Published\s*(.+)/)
             if (publisherMatch) {
@@ -258,7 +258,7 @@ export function BookTextAnalyzerModal({
             }
           }
           
-          // 3. Buscar idioma
+          // 3. Search for language
           else if (trimmedLine.includes('Language')) {
             const langMatch = trimmedLine.match(/Language\s*(.+)/)
             if (langMatch) {
@@ -266,7 +266,7 @@ export function BookTextAnalyzerModal({
             }
           }
           
-          // NO resetear currentSection aquí - mantenerlo para procesar líneas siguientes
+          // DON'T reset currentSection here - keep it to process following lines
           break
       }
     })
@@ -314,10 +314,10 @@ export function BookTextAnalyzerModal({
     if (!analyzedData) return
 
     try {
-      // CONVERTIR a formato bulk (igual que BulkInputSection)
+      // CONVERT to bulk format (same as BulkInputSection)
       const bulkDataText = convertToBulkDataFormat(analyzedData)
       
-      // USAR processBulkData (igual que BulkInputSection)  
+      // USE processBulkData (same as BulkInputSection)  
       const formData = await processBulkData(bulkDataText)
       
       if (formData && onOpenAddBook) {
@@ -326,19 +326,19 @@ export function BookTextAnalyzerModal({
       }
     } catch (error) {
       toast.error("Error", {
-        description: "Hubo un problema al procesar los datos del libro.",
+        description: "There was a problem processing the book data.",
       })
     }
   }
   
-  // Función para manejar el clic en el overlay
+  // Function to handle overlay click
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose()
     }
   }
 
-  // Función para prevenir que el clic en el contenido cierre el modal
+  // Function to prevent content click from closing modal
   const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation()
   }
@@ -357,7 +357,7 @@ export function BookTextAnalyzerModal({
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5" />
-            Analizador de Texto de Libros
+            Book Text Analyzer
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -365,28 +365,28 @@ export function BookTextAnalyzerModal({
         </CardHeader>
 
         <CardContent className="flex-1 overflow-hidden flex gap-4">
-          {/* Columna izquierda - Input */}
+          {/* Left column - Input */}
           <div className="flex-1 flex flex-col">
             <Textarea
-              placeholder="Pega aquí el texto del libro..."
+              placeholder="Paste book text here..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="flex-1 min-h-[300px] resize-none font-mono text-sm"
             />
             <Button onClick={handleAnalyze} className="mt-4" disabled={!inputText.trim()}>
-              Analizar Texto
+              Analyze Text
             </Button>
           </div>
 
-          {/* Columna derecha - Resultados */}
+          {/* Right column - Results */}
           <div className="flex-1 flex flex-col">
             <ScrollArea className="flex-1 pr-4">
               {analyzedData ? (
                 <div className="space-y-4">
-                  {/* Título - Siempre mostrar */}
+                  {/* Title - Always show */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">Título</h3>
+                      <h3 className="font-semibold">Title</h3>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -396,14 +396,14 @@ export function BookTextAnalyzerModal({
                         {copiedField === 'title' ? <CheckCheck className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                       </Button>
                     </div>
-                    <p className="text-sm p-2 bg-muted rounded">{analyzedData.title || 'No se pudo encontrar el título'}</p>
+                    <p className="text-sm p-2 bg-muted rounded">{analyzedData.title || 'Could not find title'}</p>
                   </div>
 
-                  {/* Serie - Solo mostrar si existe */}
+                  {/* Series - Only show if exists */}
                   {analyzedData.series && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">Serie</h3>
+                        <h3 className="font-semibold">Series</h3>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -417,10 +417,10 @@ export function BookTextAnalyzerModal({
                     </div>
                   )}
 
-                  {/* Autor - Siempre mostrar */}
+                  {/* Author - Always show */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">Autor</h3>
+                      <h3 className="font-semibold">Author</h3>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -430,14 +430,14 @@ export function BookTextAnalyzerModal({
                         {copiedField === 'author' ? <CheckCheck className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                       </Button>
                     </div>
-                    <p className="text-sm p-2 bg-muted rounded">{analyzedData.author || 'No se pudo encontrar el autor'}</p>
+                    <p className="text-sm p-2 bg-muted rounded">{analyzedData.author || 'Could not find author'}</p>
                   </div>
 
-                  {/* Géneros - Solo mostrar si hay géneros */}
+                  {/* Genres - Only show if there are genres */}
                   {analyzedData.genres.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">Géneros</h3>
+                        <h3 className="font-semibold">Genres</h3>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -465,41 +465,41 @@ export function BookTextAnalyzerModal({
                     </div>
                   )}
 
-                  {/* Detalles - Solo mostrar si hay al menos un dato */}
+                  {/* Details - Only show if there's at least one data point */}
                   {(analyzedData.pages > 0 || analyzedData.language || analyzedData.publishedDate || analyzedData.publisher) && (
                     <div className="grid grid-cols-2 gap-4">
                       {analyzedData.pages > 0 && (
                         <div>
-                          <h3 className="font-semibold text-sm mb-1">Páginas</h3>
+                          <h3 className="font-semibold text-sm mb-1">Pages</h3>
                           <p className="text-sm">{analyzedData.pages}</p>
                         </div>
                       )}
                       {analyzedData.language && (
                         <div>
-                          <h3 className="font-semibold text-sm mb-1">Idioma</h3>
+                          <h3 className="font-semibold text-sm mb-1">Language</h3>
                           <p className="text-sm">{analyzedData.language}</p>
                         </div>
                       )}
                       {analyzedData.publishedDate && (
                         <div>
-                          <h3 className="font-semibold text-sm mb-1">Publicación</h3>
+                          <h3 className="font-semibold text-sm mb-1">Publication</h3>
                           <p className="text-sm">{analyzedData.publishedDate}</p>
                         </div>
                       )}
                       {analyzedData.publisher && (
                         <div>
-                          <h3 className="font-semibold text-sm mb-1">Editorial</h3>
+                          <h3 className="font-semibold text-sm mb-1">Publisher</h3>
                           <p className="text-sm">{analyzedData.publisher}</p>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Premios literarios - Solo mostrar si hay premios */}
+                  {/* Literary Awards - Only show if there are awards */}
                   {analyzedData.literaryAwards && analyzedData.literaryAwards.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">Premios Literarios</h3>
+                        <h3 className="font-semibold">Literary Awards</h3>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -527,11 +527,11 @@ export function BookTextAnalyzerModal({
                     </div>
                   )}
 
-                  {/* Personajes - Solo mostrar si hay personajes */}
+                  {/* Characters - Only show if there are characters */}
                   {analyzedData.characters && analyzedData.characters.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">Personajes</h3>
+                        <h3 className="font-semibold">Characters</h3>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -562,13 +562,13 @@ export function BookTextAnalyzerModal({
                   <Separator />
 
                   <Button onClick={handleUseData} className="w-full">
-                    Usar estos datos
+                    Use This Data
                   </Button>
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground py-8">
                   <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Los datos analizados aparecerán aquí</p>
+                  <p>Analyzed data will appear here</p>
                 </div>
               )}
             </ScrollArea>

@@ -37,22 +37,22 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
   const [prefilledData, setPrefilledData] = useState<any>(null)
   const [isAddBookOpen, setIsAddBookOpen] = useState(false)
   
-  // Estados para las opciones necesarias para el hook
+  // States for options needed for the hook
   const [genresOptions, setGenresOptions] = useState<{ value: string; label: string; id?: number }[]>([])
   const [authorsOptions, setAuthorsOptions] = useState<{ value: string; label: string; id?: number }[]>([])
   const [seriesOptions, setSeriesOptions] = useState<{ value: string; label: string; id?: number }[]>([])
 
-  // Cargar opciones básicas al abrir el modal
+  // Load basic options when opening the modal
   useEffect(() => {
     const fetchOptionsAndPrepareData = async () => {
       if (!isOpen || !book) return
 
       try {
-        // Autores
+        // Authors
         const { data: authors } = await supabase.from("authors").select("id, name").order("name", { ascending: true })
         setAuthorsOptions(authors?.map((a) => ({ value: a.name, label: a.name, id: a.id })) || [])
 
-        // Géneros
+        // Genres
         const { data: genres } = await supabase.from("genres").select("id, name").order("name", { ascending: true })
         setGenresOptions(genres?.map((g) => ({ value: g.name, label: g.name, id: g.id })) || [])
 
@@ -60,7 +60,7 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
         const { data: series } = await supabase.from("series").select("id, name").order("name", { ascending: true })
         setSeriesOptions(series?.map((s) => ({ value: s.name, label: s.name, id: s.id })) || [])
 
-        // Preparar datos inmediatamente cuando se abre el modal
+        // Prepare data immediately when modal opens
         const preparedData = prepareBookDataDirectly()
         setPrefilledData(preparedData)
       } catch (error) {
@@ -72,7 +72,7 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
   }, [isOpen, book])
 
   const handleOpenAddBook = () => {
-    // Cerrar el modal de detalles y abrir el de agregar libro
+    // Close details modal and open add book modal
     onOpenChange(false)
     setIsAddBookOpen(true)
   }
@@ -84,11 +84,11 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
 
   if (!book) return null
 
-  // Método directo como fallback - mapeando exactamente los campos del formulario
+  // Direct method as fallback - mapping exactly the form fields
   const prepareBookDataDirectly = () => {
     const volumeInfo = book.volumeInfo
     
-    // Buscar IDs existentes para autores y géneros
+    // Find existing IDs for authors and genres
     const authorName = volumeInfo.authors?.[0] || ""
     const existingAuthor = authorsOptions.find(a => a.value === authorName)
     
@@ -115,9 +115,9 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
       publisher: volumeInfo.publisher || "",
       language: getLanguageName(volumeInfo.language || ""),
       era: "",
-      format: "Físico", // Valor por defecto
-      audience: "Adulto", // Valor por defecto
-      readingDensity: "",
+      format: "Physical", // Default value
+      audience: "Adult", // Default value
+      readingDensity: "Medium",
       awards: "",
       cover: volumeInfo.imageLinks?.thumbnail || volumeInfo.imageLinks?.smallThumbnail || "",
       mainCharacters: [],
@@ -138,18 +138,18 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-50">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-purple-800 flex items-center gap-2">
+            <DialogTitle className="text-2xl font-bold text flex items-center gap-2">
               <BookOpen className="h-6 w-6" />
-              Detalles del Libro
+              Book Details
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Información Principal */}
-            <Card className="border-purple-200">
+            {/* Main Information */}
+            <Card className="bordes">
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Portada */}
+                  {/* Cover */}
                   <div className="flex justify-center">
                     <div className="w-48 h-64 bg-gray-100 rounded-lg shadow-md overflow-hidden">
                       {volumeInfo.imageLinks?.thumbnail ? (
@@ -162,14 +162,14 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200">
-                          <BookOpen className="h-16 w-16 text-purple-400" />
+                        <div className="btn-cover">
+                          <BookOpen className="h-16 w-16 text-v400" />
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Información Básica */}
+                  {/* Basic Information */}
                   <div className="md:col-span-2 space-y-4">
                     <div>
                       <h1 className="text-2xl font-bold text-gray-800 mb-2">{volumeInfo.title}</h1>
@@ -179,67 +179,65 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
                     </div>
 
                     <div className="space-y-3">
-                      {/* Autores */}
+                      {/* Authors */}
                       {volumeInfo.authors && (
                         <div className="flex items-start gap-2">
-                          <User className="h-5 w-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <User className="h-5 w-5 text-v600 mt-0.5 flex-shrink-0" />
                           <div>
-                            <span className="font-semibold text-gray-700">Autor(es): </span>
+                            <span className="font-semibold text-gray-700">Author(s): </span>
                             <span className="text-gray-600">{volumeInfo.authors.join(', ')}</span>
                           </div>
                         </div>
                       )}
 
-                      {/* Géneros */}
+                      {/* Genres */}
                       {volumeInfo.categories && (
-                        <div className="flex items-start gap-2">
-                          <BookOpen className="h-5 w-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="font-semibold text-gray-700">Géneros: </span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {volumeInfo.categories.map((category: string, index: number) => (
-                                <Badge key={index} variant="outline" className="bg-purple-50 text-purple-700 text-xs">
-                                  {category}
-                                </Badge>
-                              ))}
-                            </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-gray-700">Genres:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {volumeInfo.categories.map((category: string, index: number) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="bg-v50 text-v700 text-xs"
+                              >
+                                {category}
+                              </Badge>
+                            ))}
                           </div>
                         </div>
                       )}
 
-                      {/* Fecha de publicación */}
+                      {/* Publication date */}
                       {volumeInfo.publishedDate && (
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-5 w-5 text-purple-600" />
                           <div>
-                            <span className="font-semibold text-gray-700">Año: </span>
+                            <span className="font-semibold text-gray-700">Year: </span>
                             <span className="text-gray-600">{volumeInfo.publishedDate.split('-')[0]}</span>
                           </div>
                         </div>
                       )}
 
-                      {/* Idioma */}
+                      {/* Language */}
                       {volumeInfo.language && (
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-700">Idioma: </span>
-                          <Badge variant="secondary" className="capitalize">
-                            {getLanguageName(volumeInfo.language)}
-                          </Badge>
+                          <span className="font-semibold text-gray-700">Language: </span>
+                          <span className="text-gray-600">{getLanguageName(volumeInfo.language)}</span>
                         </div>
                       )}
 
-                      {/* Páginas */}
+                      {/* Pages */}
                       {volumeInfo.pageCount && (
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-700">Páginas: </span>
+                          <span className="font-semibold text-gray-700">Pages: </span>
                           <span className="text-gray-600">{volumeInfo.pageCount}</span>
                         </div>
                       )}
 
-                      {/* Editorial */}
+                      {/* Publisher */}
                       {volumeInfo.publisher && (
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-700">Editorial: </span>
+                          <span className="font-semibold text-gray-700">Publisher: </span>
                           <span className="text-gray-600">{volumeInfo.publisher}</span>
                         </div>
                       )}
@@ -249,11 +247,11 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
               </CardContent>
             </Card>
 
-            {/* Enlaces externos */}
+            {/* External links */}
             {(volumeInfo.previewLink || volumeInfo.infoLink) && (
-              <Card className="border-purple-200">
+              <Card className="bordes">
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-purple-800 mb-3">Enlaces</h3>
+                  <h3 className="text-lg font-semibold text mb-3">Links</h3>
                   <div className="flex gap-3">
                     {volumeInfo.previewLink && (
                       <a
@@ -263,7 +261,7 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
                         <ExternalLink className="h-4 w-4" />
-                        Vista Previa
+                        Preview
                       </a>
                     )}
                     {volumeInfo.infoLink && (
@@ -274,7 +272,7 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
                         className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                       >
                         <ExternalLink className="h-4 w-4" />
-                        Más Información
+                        More Information
                       </a>
                     )}
                   </div>
@@ -282,30 +280,30 @@ export function BookSearchDetails({ book, isOpen, onOpenChange, refreshData }: B
               </Card>
             )}
 
-            {/* Botones de Acción */}
+            {/* Action Buttons */}
             <div className="flex gap-4 justify-end">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                className="button-tran2"
               >
-                Cerrar
+                Close
               </Button>
               
-              {/* Botón que abre el AddBookModal */}
+              {/* Button that opens AddBookModal */}
               <Button
                 onClick={handleOpenAddBook}
-                className="bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white shadow-md"
+                className="button1"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Agregar a Mi Biblioteca
+                Add to My Library
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* AddBookModal separado pero controlado */}
+      {/* Separate but controlled AddBookModal */}
       <AddBookModal
         isOpen={isAddBookOpen}
         onOpenChange={handleCloseAddBook}

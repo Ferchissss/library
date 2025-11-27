@@ -18,24 +18,24 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
   const [isFocused, setIsFocused] = useState(false)
   const [activeTab, setActiveTab] = useState("edit")
 
-  // Función para manejar atajos de teclado
+  // Function to handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Atajo para negrita: Ctrl/Cmd + B
+    // Bold shortcut: Ctrl/Cmd + B
     if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
       e.preventDefault()
       wrapSelection("**", "**")
     }
-    // Atajo para cursiva: Ctrl/Cmd + I
+    // Italic shortcut: Ctrl/Cmd + I
     else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
       e.preventDefault()
       wrapSelection("*", "*")
     }
-    // Atajo para tachado: Ctrl/Cmd + Shift + X
+    // Strikethrough shortcut: Ctrl/Cmd + Shift + X
     else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') {
       e.preventDefault()
       wrapSelection("~~", "~~")
     }
-    // Atajo para cita: Ctrl/Cmd + Shift + >
+    // Quote shortcut: Ctrl/Cmd + Shift + >
     else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === '.') {
       e.preventDefault()
       wrapSelection("> ", "")
@@ -86,7 +86,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           size="sm"
           onClick={() => addHeading(1)}
           className="h-8 w-8 p-0 text-gray-600 hover:text-purple-700"
-          title="Título 1 (Ctrl+Alt+1)"
+          title="Heading 1 (Ctrl+Alt+1)"
         >
           <Heading1 className="h-4 w-4" />
         </Button>
@@ -96,7 +96,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           size="sm"
           onClick={() => addHeading(2)}
           className="h-8 w-8 p-0 text-gray-600 hover:text-purple-700"
-          title="Título 2 (Ctrl+Alt+2)"
+          title="Heading 2 (Ctrl+Alt+2)"
         >
           <Heading2 className="h-4 w-4" />
         </Button>
@@ -106,7 +106,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           size="sm"
           onClick={() => addHeading(3)}
           className="h-8 w-8 p-0 text-gray-600 hover:text-purple-700"
-          title="Título 3 (Ctrl+Alt+3)"
+          title="Heading 3 (Ctrl+Alt+3)"
         >
           <Heading3 className="h-4 w-4" />
         </Button>
@@ -116,7 +116,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           size="sm"
           onClick={() => wrapSelection("**", "**")}
           className="h-8 w-8 p-0 text-gray-600 hover:text-purple-700"
-          title="Negrita (Ctrl+B)"
+          title="Bold (Ctrl+B)"
         >
           <Bold className="h-4 w-4" />
         </Button>
@@ -126,7 +126,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           size="sm"
           onClick={() => wrapSelection("*", "*")}
           className="h-8 w-8 p-0 text-gray-600 hover:text-purple-700"
-          title="Cursiva (Ctrl+I)"
+          title="Italic (Ctrl+I)"
         >
           <Italic className="h-4 w-4" />
         </Button>
@@ -136,7 +136,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           size="sm"
           onClick={() => wrapSelection("~~", "~~")}
           className="h-8 w-8 p-0 text-gray-600 hover:text-purple-700"
-          title="Tachado (Ctrl+Shift+X)"
+          title="Strikethrough (Ctrl+Shift+X)"
         >
           <Strikethrough className="h-4 w-4" />
         </Button>
@@ -146,7 +146,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           size="sm"
           onClick={() => addList(false)}
           className="h-8 w-8 p-0 text-gray-600 hover:text-purple-700"
-          title="Lista no ordenada"
+          title="Unordered list"
         >
           <List className="h-4 w-4" />
         </Button>
@@ -156,7 +156,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           size="sm"
           onClick={() => addList(true)}
           className="h-8 w-8 p-0 text-gray-600 hover:text-purple-700"
-          title="Lista ordenada"
+          title="Ordered list"
         >
           <ListOrdered className="h-4 w-4" />
         </Button>
@@ -166,20 +166,20 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           size="sm"
           onClick={() => wrapSelection("> ", "")}
           className="h-8 w-8 p-0 text-gray-600 hover:text-purple-700"
-          title="Cita (Ctrl+Shift+>)"
+          title="Quote (Ctrl+Shift+>)"
         >
           <Quote className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Editor y Preview con pestañas */}
+      {/* Editor and Preview with tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-gray-50">
           <TabsTrigger value="edit" className="flex items-center gap-2">
-            <Edit className="h-4 w-4" /> Editar
+            <Edit className="h-4 w-4" /> Edit
           </TabsTrigger>
           <TabsTrigger value="preview" className="flex items-center gap-2">
-            <Eye className="h-4 w-4" /> Vista previa
+            <Eye className="h-4 w-4" /> Preview
           </TabsTrigger>
         </TabsList>
         <TabsContent value="edit" className="p-0">
@@ -198,7 +198,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
           {value ? (
             <MarkdownViewer content={value} />
           ) : (
-            <p className="text-gray-400 italic">Escribe algo para ver la vista previa...</p>
+            <p className="text-gray-400 italic">Write something to see the preview...</p>
           )}
         </TabsContent>
       </Tabs>

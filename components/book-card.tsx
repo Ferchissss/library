@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
 import type { Book } from "@/lib/types"
 import { AVAILABLE_COLORS, getConsistentColorIndex } from "@/lib/colors";
+import { StarRating, EmptyStarRating } from "./book-components"
 
 interface BookCardProps {
   book: Book
@@ -31,7 +32,7 @@ export function BookCard({ book }: BookCardProps) {
           alt={book.title}
           width={150}
           height={220}
-          className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300 rounded-t-lg"
+          className="w-full h-auto aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300 rounded-t-lg"
         />
         {book.favorite && (
           <div className="absolute top-2 right-2">
@@ -43,7 +44,7 @@ export function BookCard({ book }: BookCardProps) {
       </div>
 
       <CardContent className="p-3 space-y-2">
-        <CardTitle className="text-sm line-clamp-2 group-hover:text-purple-600 transition-colors leading-tight">
+        <CardTitle className="text-sm line-clamp-2 group-hover:text-v600 transition-colors leading-tight">
           {book.title}
         </CardTitle>
         <CardDescription className="text-xs font-medium text-muted-foreground">{book.author?.name}</CardDescription>
@@ -73,13 +74,20 @@ export function BookCard({ book }: BookCardProps) {
             )}
           </div>
           
-          <div className="flex items-center gap-0.5">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className={`h-2.5 w-2.5 ${i < Math.round((book.rating ?? 0) / 2) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+          <div className="flex items-center">
+            {book.rating ? (
+              <StarRating 
+                rating={book.rating} 
+                size={2.5} 
+                showNumber={false}
+                className="justify-end"
               />
-            ))}
+            ) : (
+              <EmptyStarRating 
+                size={2.5}
+                className="justify-end"
+              />
+            )}
           </div>
         </div>
 

@@ -14,8 +14,8 @@ export function ViewModeToggle() {
         onClick={() => setViewMode("cards")}
         className={`gap-2 
           ${viewMode === "cards" 
-            ? "bg-violet-200 text-violet-900 hover:bg-violet-300" 
-            : "border-violet-300 text-violet-600 hover:bg-violet-100"
+            ? "button2 text-white" 
+            : "button-tran2"
           }`}
       >
         <div className="grid grid-cols-2 gap-0.5 w-3 h-3">
@@ -24,7 +24,7 @@ export function ViewModeToggle() {
           <div className="bg-current rounded-sm"></div>
           <div className="bg-current rounded-sm"></div>
         </div>
-        Portadas
+        Covers
       </Button>
 
       <Button
@@ -33,8 +33,8 @@ export function ViewModeToggle() {
         onClick={() => setViewMode("table")}
         className={`gap-2 
           ${viewMode === "table" 
-            ? "bg-violet-200 text-violet-900 hover:bg-violet-300" 
-            : "border-violet-300 text-violet-600 hover:bg-violet-100"
+            ? "button2 text-white" 
+            : "button-tran2"
           }`}
       >
         <div className="flex flex-col gap-0.5 w-3 h-3">
@@ -42,7 +42,7 @@ export function ViewModeToggle() {
           <div className="bg-current h-0.5 rounded"></div>
           <div className="bg-current h-0.5 rounded"></div>
         </div>
-        Lista
+        List
       </Button>
     </div>
   )

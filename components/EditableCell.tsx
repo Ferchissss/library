@@ -9,10 +9,7 @@ import type { Book } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, X, ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { AVAILABLE_COLORS, getConsistentColorIndex } from "@/lib/colors";
 
 interface EditableCellProps {
   book: Book
@@ -23,27 +20,6 @@ interface EditableCellProps {
   onCancel: () => void
   refreshOptions?: () => Promise<void>
 }
-
-const availableColors = AVAILABLE_COLORS;
-
-// Función para obtener estilos de color consistentes
-const getBadgeStyle = (value: string, columnId: string) => {
-  if (!value) {
-    return {
-      backgroundColor: availableColors[0].bg,
-      borderColor: availableColors[0].border.replace('border-', '#'),
-      color: availableColors[0].text.replace('text-', '#')
-    };
-  }
-  
-  const colorIndex = getConsistentColorIndex(value, columnId, availableColors.length);
-  const colorClass = availableColors[colorIndex];
-  return {
-    backgroundColor: colorClass.bg,
-    borderColor: colorClass.border.replace('border-', '#'),
-    color: colorClass.text.replace('text-', '#')
-  };
-};
 
 export const EditableCell: React.FC<EditableCellProps> = ({
   book,
@@ -57,18 +33,47 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   const [editValue, setEditValue] = useState<any>(value)
   const inputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const multiSelectRef = useRef<any>(null)
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+  const [autoOpenMultiSelect, setAutoOpenMultiSelect] = useState(false)
+
+  // Unified configuration for all field types
+  const fieldConfig = {
+    // Fields that open automatically in popover
+    autoOpenPopover: ["dateStarted", "dateRead", "genre", "type", "publisher", "language", "era", "format", "audience", "readingDensity", "author", "universe", "favorite"],
+    
+    // Fields that are MultiSelect
+    multiSelectFields: ["genre", "type", "publisher", "language", "era", "format", "audience", "readingDensity", "author", "universe"],
+    
+    // Fields that are single selection
+    singleSelectFields: ["type", "publisher", "language", "era", "format", "audience", "readingDensity", "author", "universe", "favorite"],
+    
+    // Fields that require IDs
+    idBasedFields: ["author", "universe", "genre"],
+    
+    // Creative fields
+    creatableFields: ["type", "publisher", "language", "era", "format", "audience", "author", "universe", "genre"]
+  }
 
   useEffect(() => {
-    if (inputRef.current && !["dateStarted", "dateRead", "genre", "review", "image_url"].includes(columnId)) {
+    // Automatically open popovers for configured fields
+    if (fieldConfig.autoOpenPopover.includes(columnId)) {
+      setIsPopoverOpen(true)
+    }
+
+    // For MultiSelect fields, activate auto-open after a small delay
+    if (fieldConfig.multiSelectFields.includes(columnId)) {
+      const timer = setTimeout(() => {
+        setAutoOpenMultiSelect(true)
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+
+    // For normal input/textarea fields, focus
+    if (inputRef.current && !fieldConfig.autoOpenPopover.includes(columnId)) {
       inputRef.current.focus()
     }
     if (textareaRef.current && columnId === "review") {
       textareaRef.current.focus()
-    }
-    if (multiSelectRef.current && ["genre", "type", "publisher", "language", "era", "format", "audience", "readingDensity", "author", "universe"].includes(columnId)) {
-      multiSelectRef.current.focus()
     }
   }, [columnId])
 
@@ -76,15 +81,16 @@ export const EditableCell: React.FC<EditableCellProps> = ({
     const valueToSave = newValue !== undefined ? newValue : editValue
     
     try {
-      // Validación específica para rating
+      // Specific validation for rating
       if (columnId === "rating") {
         const ratingValue = parseFloat(valueToSave);
         if (ratingValue < 1 || ratingValue > 10) {
-          toast.error("La calificación debe estar entre 1 y 10");
+          toast.error("Rating must be between 1 and 10");
           onCancel();
           return;
         }
       }
+
       const fieldMap: Record<string, string> = {
         title: "title",
         rating: "rating",
@@ -116,10 +122,9 @@ export const EditableCell: React.FC<EditableCellProps> = ({
 
       let dbValue = valueToSave
 
-      // Convertir nombres a IDs para campos relacionales
-      if (columnId === "author" || columnId === "universe") {
+      // Convert names to IDs for relational fields
+      if (fieldConfig.idBasedFields.includes(columnId) && columnId !== "genre") {
         if (valueToSave) {
-          // Si es un nuevo item, refrescar opciones primero
           if (isNewItem && refreshOptions) {
             await refreshOptions()
             await new Promise(resolve => setTimeout(resolve, 100))
@@ -145,7 +150,7 @@ export const EditableCell: React.FC<EditableCellProps> = ({
                   dbValue = data.id
                 } else {
                   dbValue = null
-                  toast.error(`No se pudo encontrar el ${columnId} "${valueToSave}"`)
+                  toast.error(`Could not find ${columnId} "${valueToSave}"`)
                 }
               }
             }
@@ -155,26 +160,23 @@ export const EditableCell: React.FC<EditableCellProps> = ({
         }
       }
 
-      // Manejo especial para géneros - ahora recibimos IDs directamente del MultiSelect
+      // Special handling for genres
       if (columnId === "genre") {
         if (Array.isArray(valueToSave)) {
-          // Filtrar IDs válidos
           const validGenreIds = valueToSave
             .map(id => parseInt(id))
             .filter(id => !isNaN(id) && id !== null && id !== undefined)
 
-          // Eliminar relaciones existentes
           const { error: deleteError } = await supabase
             .from("book_genre")
             .delete()
             .eq("book_id", book.id)
 
           if (deleteError) {
-            console.error("Error eliminando relaciones de género:", deleteError)
+            console.error("Error deleting genre relationships:", deleteError)
             throw deleteError
           }
 
-          // Crear nuevas relaciones si hay géneros válidos
           if (validGenreIds.length > 0) {
             const genreInserts = validGenreIds.map(genreId => ({
               book_id: book.id,
@@ -186,26 +188,26 @@ export const EditableCell: React.FC<EditableCellProps> = ({
               .insert(genreInserts)
 
             if (insertError) {
-              console.error("Error insertando relaciones de género:", insertError)
+              console.error("Error inserting genre relationships:", insertError)
             }
           }
 
-          toast.success("Géneros actualizados correctamente")
+          toast.success("Genres updated successfully")
           onSave(validGenreIds)
           return
         } else {
-          // Si no es un array, manejar como valor único
-          toast.error("Formato de géneros inválido")
+          toast.error("Invalid genre format")
           onCancel()
           return
         }
       }
 
+      // Type conversions
       if (columnId === "rating") dbValue = parseFloat(valueToSave)
       if (columnId === "pages" || columnId === "year") dbValue = parseInt(valueToSave)
       if (columnId === "favorite") dbValue = Boolean(valueToSave)
       if (columnId === "dateStarted" || columnId === "dateRead") {
-        dbValue = valueToSave ? new Date(valueToSave).toISOString() : null
+        dbValue = valueToSave 
       }
 
       if (columnId !== "genre") {
@@ -217,11 +219,12 @@ export const EditableCell: React.FC<EditableCellProps> = ({
         if (error) throw error
       }
 
-      toast.success(`Campo ${columnId} actualizado`)
+      toast.success(`Field ${columnId} updated`)
       onSave(dbValue)
+      setIsPopoverOpen(false)
     } catch (error) {
       console.error("Error updating field:", error)
-      toast.error(`No se pudo actualizar el campo ${columnId}`)
+      toast.error(`Could not update field ${columnId}`)
       onCancel()
     }
   }
@@ -233,14 +236,8 @@ export const EditableCell: React.FC<EditableCellProps> = ({
     }
     if (e.key === "Escape") {
       onCancel()
+      setIsPopoverOpen(false)
     }
-  }
-
-  const commonInputProps = {
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value),
-    onKeyDown: handleKeyDown,
-    className: "w-[250px] text-sm px-3 py-2",
-    ref: inputRef
   }
 
   const getTableName = (columnId: string) => {
@@ -252,20 +249,19 @@ export const EditableCell: React.FC<EditableCellProps> = ({
     }
   }
 
-  // Función para manejar cambios en MultiSelect
+  // Function to handle MultiSelect changes
   const handleMultiSelectChange = (selected: string[], newItem?: { value: string; label: string; id?: number }) => {
     const newValue = selected[0] || null
     setEditValue(newValue)
     handleSave(newValue, !!newItem)
   }
 
-  // Función específica para géneros
+  // Specific function for genres
   const handleGenreChange = (selected: string[], newItem?: { value: string; label: string; id?: number }) => {
     setEditValue(selected)
-    // No guardamos automáticamente para géneros, esperamos que el usuario presione "Guardar"
   }
 
-  // Función específica para autor/universo
+  // Specific function for author/universe
   const handleAuthorUniverseChange = async (selected: string[], newItem?: { value: string; label: string; id?: number }) => {
     const newValue = selected[0] || null
     setEditValue(newValue)
@@ -276,18 +272,17 @@ export const EditableCell: React.FC<EditableCellProps> = ({
     }
   }
 
-  // Preparar los valores seleccionados para el MultiSelect de géneros
+  // Prepare selected values for genre MultiSelect
   const getSelectedGenreValues = () => {
     if (columnId !== "genre") return editValue ? [editValue] : []
     
-    // Para géneros, necesitamos convertir los IDs a strings para el MultiSelect
     if (Array.isArray(editValue)) {
       return editValue.map(id => id.toString())
     }
     return editValue ? [editValue.toString()] : []
   }
 
-  // Preparar las opciones para el MultiSelect de géneros
+  // Prepare options for genre MultiSelect
   const getGenreOptions = () => {
     return options.map(option => ({
       value: option.id?.toString() || option.value,
@@ -296,233 +291,244 @@ export const EditableCell: React.FC<EditableCellProps> = ({
     }))
   }
 
-  switch (columnId) {
-    case "title":
-    case "awards":
-    case "image_url":
-      return (
-          <Input
-          value={editValue || ""}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="absolute z-50 w-[250px] text-xs px-2 py-1 h-7 bg-white shadow-sm"
-          ref={inputRef}
-        />
-      )
+  // UNIFIED COMPONENT FOR POPOVERS
+  const renderPopoverContent = () => {
+    switch (columnId) {
+      case "dateStarted":
+      case "dateRead":
+        return (
+          <div className="p-0 -m-px">
+            <Calendar
+              value={editValue} // ← String directly
+              onChange={(dateString) => { // ← Receives string
+                setEditValue(dateString)
+                handleSave(dateString)
+              }}
+              onClear={() => {
+                setEditValue(null)
+                handleSave(null)
+              }}
+            />    
+          </div>
+        )
 
-    case "rating":
-    case "pages":
-    case "year":
-      return (
-        <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2">
+      case "genre":
+        return (
+          <>
+            <MultiSelect
+              options={getGenreOptions()}
+              selected={getSelectedGenreValues()}
+              onChange={handleGenreChange}
+              singleSelect={false}
+              className="text-sm"
+              placeholder="Select genres"
+              tableName="genres"
+              returnId={true}
+              refreshOptions={refreshOptions}
+              creatable={true}
+              columnId={columnId}
+              autoOpen={autoOpenMultiSelect}
+            />
+            <div className="p-1 border-t flex justify-end gap-1 text-xs mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 border-violet-300 text-violet-400 hover:bg-violet-100 text-xs"
+                onClick={onCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="h-6 px-2 bg-violet-200 text-violet-700 hover:bg-violet-300 text-xs"
+                onClick={() => handleSave(editValue)}
+              >
+                Save
+              </Button>
+            </div>
+          </>
+        )
+
+      case "type":
+      case "publisher":
+      case "language":
+      case "era":
+      case "format":
+      case "audience":
+      case "readingDensity":
+        return (
+          <MultiSelect
+            options={options}
+            selected={editValue ? [editValue] : []}
+            onChange={handleMultiSelectChange}
+            singleSelect={true}
+            className="text-sm"
+            placeholder={`Select ${columnId}`}
+            creatable={fieldConfig.creatableFields.includes(columnId)}
+            columnId={columnId}
+            autoOpen={autoOpenMultiSelect}
+          />
+        )
+
+      case "author":
+      case "universe":
+        return (
+          <MultiSelect
+            options={options}
+            selected={editValue ? [editValue] : []}
+            onChange={handleAuthorUniverseChange}
+            singleSelect={true}
+            className="text-sm"
+            placeholder={`Select ${columnId === 'universe' ? 'a universe' : columnId}`}
+            tableName={getTableName(columnId)}
+            returnId={true}
+            creatable={true}
+            columnId={columnId}
+            autoOpen={autoOpenMultiSelect}
+          />
+        )
+
+      default:
+        return null
+    }
+  }
+
+  // UNIFIED COMPONENT FOR POPOVER
+  const renderAutoOpenPopover = () => (
+    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+      <PopoverTrigger asChild>
+        <div className="absolute inset-0 opacity-0" />
+      </PopoverTrigger>
+      <PopoverContent 
+        className={cn(
+          "z-[1000] p-0",
+          columnId === "favorite" ? "w-32" : 
+          ["dateStarted", "dateRead"].includes(columnId) ? "w-auto" : "min-w-[250px]"
+        )}
+        align="start"
+        side="bottom"
+        sideOffset={4}
+        collisionPadding={16}
+      >
+        {renderPopoverContent()}
+      </PopoverContent>
+    </Popover>
+  )
+
+  // Rendering of normal fields (not popover)
+  const renderNormalField = () => {
+    switch (columnId) {
+      case "title":
+      case "awards":
+      case "image_url":
+        return (
+          <Input
+            value={editValue || ""}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="absolute z-50 w-[250px] text-xs px-2 py-1 h-7 bg-white shadow-sm"
+            ref={inputRef}
+          />
+        )
+
+      case "rating":
+      case "pages":
+      case "year":
+        return (
           <Input
             type="number"
             min={columnId === "rating" ? "1" : "1"}
             max={columnId === "rating" ? "10" : undefined}
             step={columnId === "rating" ? "1" : "1"}
             value={editValue || ""}
-            {...commonInputProps}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="absolute z-50 w-[75px] text-xs px-2 py-1 h-7 bg-white shadow-sm"
+            ref={inputRef}
           />
-        </div>
-      )
+        )
 
-    case "dateStarted":
-    case "dateRead":
-      return (
-        <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-          <PopoverTrigger asChild>
-            <div className="absolute z-50">
+      case "summary":
+        return (
+          <div className="absolute z-50 bg-white rounded-md border p-2 w-[600px]">
+            <Textarea
+              value={editValue || ""}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.ctrlKey) {
+                  e.preventDefault()
+                  handleSave()
+                }
+                if (e.key === "Escape") {
+                  onCancel()
+                }
+              }}
+              className="w-full text-xs px-2 py-1 bg-white min-h-[400px] resize-none border-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              placeholder="Write the book summary..."
+              ref={textareaRef}
+            />
+            <div className="p-1 border-t flex justify-end gap-1 text-xs mt-2">
               <Button
                 variant="outline"
-                className={cn(
-                  "w-[250px] justify-start text-left font-normal",
-                  !editValue && "text-muted-foreground"
-                )}
+                size="sm"
+                className="h-6 px-2 border-violet-300 text-violet-400 hover:bg-violet-100 text-xs"
+                onClick={onCancel}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {editValue ? format(new Date(editValue), "PPP") : <span>Selecciona una fecha</span>}
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="h-6 px-2 bg-violet-200 text-violet-700 hover:bg-violet-300 text-xs"
+                onClick={() => handleSave()}
+              >
+                Save
               </Button>
             </div>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <div className="flex items-center gap-2 p-2">
-              <Calendar
-                mode="single"
-                selected={editValue ? new Date(editValue) : undefined}
-                onSelect={(date) => {
-                  setEditValue(date?.toISOString())
-                  handleSave(date?.toISOString())
-                  setIsDatePickerOpen(false)
-                }}
-                initialFocus
-              />
-              {editValue && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                  onClick={() => {
-                    setEditValue(null)
-                    handleSave(null)
-                    setIsDatePickerOpen(false)
-                  }}
-                  title="Eliminar fecha"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
-      )
-
-    case "genre":
-      return (
-        <div className="absolute z-50 bg-white shadow-lg rounded-md border min-w-[250px]">
-          <MultiSelect
-            ref={multiSelectRef}
-            options={getGenreOptions()}
-            selected={getSelectedGenreValues()}
-            onChange={handleGenreChange}
-            className="text-sm p-2"
-            placeholder="Selecciona géneros"
-            tableName="genres"
-            returnId={true}
-            refreshOptions={refreshOptions}
-            creatable={true}
-            columnId={columnId} // Pasar el columnId para colores consistentes
-          />
-          <div className="p-1 border-t flex justify-end gap-1 text-xs">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 border-violet-300 text-violet-400 hover:bg-violet-100 text-xs"
-              onClick={onCancel}
-            >
-              Cancelar
-            </Button>
-            <Button
-              size="sm"
-              className="h-6 px-2 bg-violet-200 text-violet-700 hover:bg-violet-300 text-xs"
-              onClick={() => handleSave(editValue)}
-            >
-              Guardar
-            </Button>
           </div>
-        </div>
-      )
+        )
 
-    case "type":
-    case "publisher":
-    case "language":
-    case "era":
-    case "format":
-    case "audience":
-    case "readingDensity":
-      return (
-        <div className="absolute z-50 bg-white shadow-lg rounded-md border min-w-[250px]">
-          <MultiSelect
-            ref={multiSelectRef}
-            options={options}
-            selected={editValue ? [editValue] : []}
-            onChange={handleMultiSelectChange}
-            singleSelect
-            className="text-sm p-2"
-            onKeyDown={handleKeyDown}
-            placeholder={`Selecciona ${columnId}`}
-            creatable={true}
-            columnId={columnId} // Pasar el columnId para colores consistentes
-          />
-        </div>
-      )
+      case "review":
+        return (
+          <div className="absolute z-50 bg-white rounded-md border p-2 w-[300px]">
+            <Textarea
+              value={editValue || ""}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.ctrlKey) {
+                  e.preventDefault()
+                  handleSave()
+                }
+                if (e.key === "Escape") {
+                  onCancel()
+                }
+              }}
+              className="w-full text-xs px-2 py-1 bg-white min-h-[100px] resize-none border-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              placeholder="Write your review..."
+              ref={textareaRef}
+            />
+            <div className="p-1 border-t flex justify-end gap-1 text-xs mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 border-violet-300 text-violet-400 hover:bg-violet-100 text-xs"
+                onClick={onCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="h-6 px-2 bg-violet-200 text-violet-700 hover:bg-violet-300 text-xs"
+                onClick={() => handleSave()}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        )
 
-    case "author":
-    case "universe":
-      return (
-        <div className="absolute z-50 bg-white shadow-lg rounded-md border min-w-[250px]">
-          <MultiSelect
-            ref={multiSelectRef}
-            options={options}
-            selected={editValue ? [editValue] : []}
-            onChange={handleAuthorUniverseChange}
-            singleSelect
-            className="text-sm p-2"
-            onKeyDown={handleKeyDown}
-            placeholder={`Selecciona ${columnId === 'universe' ? 'un universo' : columnId}`}
-            tableName={getTableName(columnId)}
-            returnId={true}
-            refreshOptions={refreshOptions}
-            creatable={true}
-            columnId={columnId} // Pasar el columnId para colores consistentes
-          />
-        </div>
-      )
-
-    case "favorite":
-      return (
-        <div className="absolute z-50 bg-white shadow-md rounded-lg border border-violet-200 p-2 w-[150px]">
-          <select
-            value={editValue ? "true" : "false"}
-            onChange={(e) => {
-              const newValue = e.target.value === "true"
-              setEditValue(newValue)
-              handleSave(newValue)
-            }}
-            className="w-full text-sm px-2 py-1 rounded-md bg-violet-50 border border-violet-200 text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-300 hover:bg-violet-100 transition-colors"
-            ref={inputRef as any}
-            onKeyDown={handleKeyDown}
-          >
-            <option value="true">Sí</option>
-            <option value="false">No</option>
-          </select>
-        </div>
-      )
-    case "summary":
-      return (
-        <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2 w-[600px]">
-          <Textarea
-            value={editValue || ""}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && e.ctrlKey) {
-                e.preventDefault()
-                handleSave()
-              }
-              if (e.key === "Escape") {
-                onCancel()
-              }
-            }}
-            className="text-sm resize-none min-h-[400px]"
-            ref={textareaRef}
-          />
-        </div>
-      )
-
-    case "review":
-      return (
-        <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2 w-[300px]">
-          <Textarea
-            value={editValue || ""}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && e.ctrlKey) {
-                e.preventDefault()
-                handleSave()
-              }
-              if (e.key === "Escape") {
-                onCancel()
-              }
-            }}
-            className="text-sm resize-none min-h-[100px]"
-            ref={textareaRef}
-          />
-        </div>
-      )
-
-    case "main_characters":
-    case "favorite_character":
-      return (
-        <div className="absolute z-50 bg-white shadow-lg rounded-md border p-2 w-[300px]">
+      case "main_characters":
+      case "favorite_character":
+        return (
           <Input
             value={editValue || ""}
             onChange={(e) => setEditValue(e.target.value)}
@@ -538,10 +544,21 @@ export const EditableCell: React.FC<EditableCellProps> = ({
             className="text-sm"
             ref={inputRef}
           />
-        </div>
-      )
+        )
 
-    default:
-      return null
+      default:
+        return null
+    }
   }
+
+  // MAIN RENDER
+  if (fieldConfig.autoOpenPopover.includes(columnId)) {
+    return (
+      <div className="absolute z-50">
+        {renderAutoOpenPopover()}
+      </div>
+    )
+  }
+
+  return renderNormalField()
 }

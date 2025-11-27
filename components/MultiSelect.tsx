@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef, useMemo } from "react"
+import { useState, useRef, useMemo, useEffect } from "react" 
 import { Check, ChevronsUpDown, Plus, X, Trash2 } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -23,7 +23,9 @@ interface MultiSelectProps {
   tableName?: "authors" | "series" | "genres"
   refreshOptions?: () => Promise<void>
   returnId?: boolean
-  columnId?: string // Nueva prop para identificar la columna
+  columnId?: string
+  autoOpen?: boolean // New prop for auto-open
+  onKeyDown?: (e: React.KeyboardEvent) => void
 }
 
 const colorClasses = AVAILABLE_COLORS;
@@ -39,7 +41,9 @@ export function MultiSelect({
   tableName,
   refreshOptions,
   returnId = false,
-  columnId = "multiselect", // Valor por defecto
+  columnId = "multiselect",
+  autoOpen = false,
+  onKeyDown,
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false)
   const [inputValue, setInputValue] = useState("")
@@ -48,7 +52,19 @@ export function MultiSelect({
   const inputRef = useRef<HTMLInputElement>(null)
   const [localNewItems, setLocalNewItems] = useState<{ value: string; label: string; id?: number }[]>([])
 
-  // Función para verificar si existe una coincidencia exacta (case insensitive)
+  // Effect to auto-open popover when requested
+  useEffect(() => {
+    if (autoOpen) {
+      setOpen(true)
+      // Focus input after a small delay to ensure popover is open
+      const timer = setTimeout(() => {
+        inputRef.current?.focus()
+      }, 150)
+      return () => clearTimeout(timer)
+    }
+  }, [autoOpen])
+
+  // Function to check for exact match (case insensitive)
   const hasExactMatch = (searchValue: string) => {
     const normalizedSearch = searchValue.trim().toLowerCase();
     return options.some(option => 
@@ -56,14 +72,14 @@ export function MultiSelect({
     );
   };
 
-  // Usar useMemo para filtrar las opciones de manera eficiente
+  // Use useMemo to filter options efficiently
   const filteredOptions = useMemo(() => {
     return options.filter(option => 
       !selected.includes(returnId ? option.id?.toString() || "" : option.value) || singleSelect
     );
   }, [options, selected, singleSelect, returnId]);
 
-  // Función para obtener estilos de color consistentes
+  // Function to get consistent color styles
   const getColorStyle = (label: string) => {
     const index = getConsistentColorIndex(label, columnId, colorClasses.length);
     const color = colorClasses[index];
@@ -76,7 +92,7 @@ export function MultiSelect({
 
   const handleSelect = (value: string, id?: number) => {
     if (selected.includes(value)) {
-      onChange(selected.filter((item) => item !== value))
+      return;
     } else {
       if (singleSelect) {
         onChange([value], { value, label: value, id })
@@ -128,15 +144,15 @@ export function MultiSelect({
           }
 
           toast({
-            title: "✅ Creado exitosamente",
-            description: `El ${tableName.slice(0, -1)} se ha añadido to the database.`,
+            title: "✅ Created successfully",
+            description: `The ${tableName.slice(0, -1)} has been added to the database.`,
           })
         }
       } catch (error) {
         console.error(`Error creating ${tableName}:`, error)
         toast({
           title: "❌ Error",
-          description: `No se pudo crear el ${tableName.slice(0, -1)}.`,
+          description: `Could not create the ${tableName.slice(0, -1)}.`,
           variant: "destructive",
         })
       }
@@ -170,8 +186,8 @@ export function MultiSelect({
       if (searchError) throw searchError
       if (!existingItems || existingItems.length === 0) {
         toast({
-          title: "❌ No encontrado",
-          description: `El ${tableName.slice(0, -1)} no existe en la base de datos.`,
+          title: "❌ Not found",
+          description: `The ${tableName.slice(0, -1)} does not exist in the database.`,
           variant: "destructive",
         })
         return
@@ -186,14 +202,14 @@ export function MultiSelect({
       onChange(selected.filter((item) => item !== itemToDelete))
 
       toast({
-        title: "✅ Eliminado exitosamente",
-        description: `El ${tableName.slice(0, -1)} se ha eliminado de la base de datos.`,
+        title: "✅ Deleted successfully",
+        description: `The ${tableName.slice(0, -1)} has been removed from the database.`,
       })
     } catch (error) {
       console.error(`Error deleting ${tableName}:`, error)
       toast({
         title: "❌ Error",
-        description: `No se pudo eliminar el ${tableName.slice(0, -1)}.`,
+        description: `Could not delete the ${tableName.slice(0, -1)}.`,
         variant: "destructive",
       })
     } finally {
@@ -202,14 +218,7 @@ export function MultiSelect({
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && inputValue.trim() && creatable) {
-      handleCreate()
-      e.preventDefault()
-    }
-  }
-
-  // Función auxiliar para verificar si una opción está seleccionada
+  // Helper function to check if an option is selected
   const isOptionSelected = (optionValue: string) => {
     return selected.includes(optionValue);
   }
@@ -223,7 +232,7 @@ export function MultiSelect({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between focus:border-purple-400 focus:ring-1 focus:ring-purple-200 h-6 min-h-6 py-1",
+              "w-full justify-between focus:border-purple-400 focus:ring-1 focus:ring-purple-200 h-6 min-h-6 py-1 text-xs",
               className,
             )}
           >
@@ -237,7 +246,7 @@ export function MultiSelect({
                   return (
                     <div
                       key={value}
-                      className="inline-flex items-center rounded-md px-2 py-0 text-xs font-medium h-4 leading-none transition-colors border"
+                      className="inline-flex items-center rounded-md px-1 py-0 text-xs font-medium h-4 leading-none transition-colors border"
                       style={colorStyle}
                     >
                       <span className="truncate max-w-40">
@@ -284,13 +293,13 @@ export function MultiSelect({
               placeholder=""
               value={inputValue}
               onValueChange={setInputValue}
-              onKeyDown={handleKeyDown}
-              className="border-0 focus:ring-0 focus:outline-none rounded-t-xl h-6 py-1 text-sm"
+              onKeyDown={onKeyDown}
+              className="border-0 focus:ring-0 focus:outline-none rounded-t-xl h-6 py-1 text-xs"
             />
             <CommandList className="max-h-64">
               <CommandEmpty>
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  No se encontraron resultados
+                  No results found
                 </div>
               </CommandEmpty>
               <CommandGroup className="p-2">
@@ -303,7 +312,7 @@ export function MultiSelect({
                   >
                     <div className="flex items-center">
                       <Plus className="mr-3 h-3 w-3 text-primary" />
-                      <span className="font-medium text-primary">Crear "{inputValue.trim()}"</span>
+                      <span className="font-medium text-primary">Create "{inputValue.trim()}"</span>
                     </div>
                   </CommandItem>
                 )}
@@ -319,8 +328,7 @@ export function MultiSelect({
                       value={option.label}
                       onSelect={() => handleSelect(optionValue, option.id)}
                       className={cn(
-                        "cursor-pointer rounded-lg px-4 py-0.5 mb-1 transition-all duration-200 hover:scale-[1.02] hover:shadow-md relative hover:brightness-95 border",
-                        isSelected && "ring-2 ring-white ring-opacity-60",
+                        "cursor-pointer rounded-lg px-1 py-0  mb-1 text-xs transition-all duration-200 hover:scale-[1.02] hover:shadow-md relative hover:brightness-95 border",
                       )}
                       style={colorStyle}
                     >
@@ -371,11 +379,11 @@ export function MultiSelect({
         isOpen={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         onConfirm={handleDelete}
-        title={`¿Eliminar ${tableName?.slice(0, -1) || "elemento"}?`}
-        description={`Esta acción eliminará permanentemente "${itemToDelete}" de la base de datos.${
-          tableName === "authors" ? " Todos los libros asociados a este autor permanecerán pero perderán la relación." : ""
+        title={`Delete ${tableName?.slice(0, -1) || "element"}?`}
+        description={`This action will permanently delete "${itemToDelete}" from the database.${
+          tableName === "authors" ? " All books associated with this author will remain but will lose the relationship." : ""
         }`}
-        confirmText="Eliminar"
+        confirmText="Delete"
         confirmVariant="destructive"
       />
     </>
