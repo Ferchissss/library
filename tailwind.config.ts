@@ -79,6 +79,12 @@ const config: Config = {
       },
     },
   },
+  // AGREGA ESTA SECCIÓN
+  safelist: [
+    {
+      pattern: /(bg|text|border)-(pink|teal|cyan|emerald|lime|amber|rose|violet|sky|slate)-(100|700|300)/,
+    },
+  ],
   plugins: [],
 }
 export default config

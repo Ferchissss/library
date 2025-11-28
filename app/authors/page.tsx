@@ -296,7 +296,7 @@ export default function Authors() {
             <Button
               variant="outline"
               onClick={fetchAuthorsData}
-              className="border-blue-300 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 bg-transparent"
+              className="border-blue-300 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 bg-transparent h-9 sm:h-10"
               size="sm"
             >
               <RefreshCw className="h-4 w-4" />

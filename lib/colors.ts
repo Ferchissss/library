@@ -1,4 +1,4 @@
-// lib/colorUtils.ts
+// lib/colors.ts
 export const AVAILABLE_COLORS = [
   { bg: "#ffe4e6", text: "text-rose-800", border: "border-rose-300", hex: "#9f1239" },
   { bg: "#fae8ff", text: "text-fuchsia-800", border: "border-fuchsia-300", hex: "#86198f" },
@@ -80,4 +80,25 @@ export const getGenreColor = (genreName: string): string => {
 // Función para resetear el mapa si es necesario (opcional)
 export const resetColorAssignments = () => {
   colorAssignmentMap.clear();
+};
+// Función específica para categorías de citas usando el sistema consistente
+export const QUOTE_CATEGORY_COLORS = [
+  { bg: "bg-pink-100", text: "text-pink-700", border: "border-pink-300" },
+  { bg: "bg-teal-100", text: "text-teal-700", border: "border-teal-300" },
+  { bg: "bg-cyan-100", text: "text-cyan-700", border: "border-cyan-300" },
+  { bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-300" },
+  { bg: "bg-lime-100", text: "text-lime-700", border: "border-lime-300" },
+  { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-300" },
+  { bg: "bg-rose-100", text: "text-rose-700", border: "border-rose-300" },
+  { bg: "bg-violet-100", text: "text-violet-700", border: "border-violet-300" },
+  { bg: "bg-sky-100", text: "text-sky-700", border: "border-sky-300" },
+  { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-300" },
+] as const;
+
+// Función específica para categorías de citas usando las clases Tailwind
+export const getQuoteCategoryColor = (category: string | undefined) => {
+  if (!category) return QUOTE_CATEGORY_COLORS[0];
+  
+  const colorIndex = getConsistentColorIndex(category, 'quote_categories', QUOTE_CATEGORY_COLORS.length);
+  return QUOTE_CATEGORY_COLORS[colorIndex];
 };
