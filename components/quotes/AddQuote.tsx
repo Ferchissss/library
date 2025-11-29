@@ -36,27 +36,27 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
     isFavorite: false,
   })
 
-  // Estados para el combobox de Tipo
+  // States for Type combobox
   const [existingTypes, setExistingTypes] = useState<string[]>([])
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
   const [filteredTypes, setFilteredTypes] = useState<string[]>([])
   const [showCreateTypeButton, setShowCreateTypeButton] = useState(false)
   const typeInputRef = useRef<HTMLInputElement>(null)
 
-  // Estados para el combobox de Categoría
+  // States for Category combobox
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false)
   const [filteredCategories, setFilteredCategories] = useState<string[]>([])
   const [showCreateCategoryButton, setShowCreateCategoryButton] = useState(false)
   const categoryInputRef = useRef<HTMLInputElement>(null)
 
-  // Cargar tipos existentes cuando se abre el modal
+  // Load existing types when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchExistingTypes()
     }
   }, [isOpen])
 
-  // Filtrar tipos cuando cambia el texto
+  // Filter types when text changes
   useEffect(() => {
     if (newQuote.type.trim() === "") {
       setFilteredTypes(existingTypes.slice(0, 10))
@@ -75,7 +75,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
     }
   }, [newQuote.type, existingTypes])
 
-  // Filtrar categorías cuando cambia el texto
+  // Filter categories when text changes
   useEffect(() => {
     if (newQuote.category.trim() === "") {
       setFilteredCategories(existingCategories.slice(0, 10))
@@ -97,13 +97,13 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
   const fetchExistingTypes = async () => {
     try {
       const response = await fetch('/api/quotes')
-      if (!response.ok) throw new Error('Error al cargar tipos')
-      const data = await response.json()
+      if (!response.ok) throw new Error('Error loading types')
+      const data: Quote[] = await response.json()
       
-      // Extraer tipos únicos de las citas existentes
+      // Extract unique types from existing quotes
       const types = [...new Set(data
-        .map((quote: Quote) => quote.type)
-        .filter((type: string | undefined) => type && type.trim() !== "")
+        .map((quote) => quote.type)
+        .filter((type): type is string => Boolean(type && type.trim() !== ""))
       )].sort()
       
       setExistingTypes(types)
@@ -113,7 +113,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
     }
   }
 
-  // Handlers para Tipo
+  // Handlers for Type
   const handleTypeInputChange = (value: string) => {
     setNewQuote(prev => ({ ...prev, type: value }))
     setShowTypeDropdown(true)
@@ -133,7 +133,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
     setShowTypeDropdown(false)
   }
 
-  // Handlers para Categoría
+  // Handlers for Category
   const handleCategoryInputChange = (value: string) => {
     setNewQuote(prev => ({ ...prev, category: value }))
     setShowCategoryDropdown(true)
@@ -153,7 +153,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
     setShowCategoryDropdown(false)
   }
 
-  // Close dropdowns cuando se hace click fuera
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (typeInputRef.current && !typeInputRef.current.contains(event.target as Node)) {
@@ -168,7 +168,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Handlers para teclado
+  // Keyboard handlers
   const handleTypeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -199,20 +199,20 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
 
   const handleAddQuote = async () => {
     if (!newQuote.text.trim()) {
-      toast.error("Por favor, completa el texto de la cita.")
+      toast.error("Please complete the quote text.")
       return
     }
 
     try {
       setIsSubmitting(true)
 
-      // Procesar la categoría
-      let finalCategory = "Sin categoría"
+      // Process category
+      let finalCategory = "Uncategorized"
       if (newQuote.category.trim()) {
         finalCategory = normalizeCategory(newQuote.category)
       }
 
-      // Preparar datos para enviar
+      // Prepare data to send
       const quoteData = {
         text: newQuote.text.trim(),
         type: newQuote.type,
@@ -231,13 +231,13 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
       })
 
       if (!response.ok) {
-        throw new Error('Error al guardar la cita')
+        throw new Error('Error saving quote')
       }
 
       const savedQuote = await response.json()
       onQuoteAdded(savedQuote)
 
-      // Resetear el formulario y cerrar el modal
+      // Reset form and close modal
       setNewQuote({
         text: "",
         source: "",
@@ -248,10 +248,10 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
       })
       setIsOpen(false)
 
-      toast.success(`¡Cita agregada exitosamente en la categoría "${finalCategory}"!`)
+      toast.success(`Quote successfully added in category "${finalCategory}"!`)
     } catch (error) {
       console.error('Error adding quote:', error)
-      toast.error('Error al guardar la cita')
+      toast.error('Error saving quote')
     } finally {
       setIsSubmitting(false)
     }
@@ -263,7 +263,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
       source: "",
       page: "",
       category: "",
-      type: "Libro",
+      type: "Book",
       isFavorite: false,
     })
     setIsOpen(false)
@@ -274,22 +274,22 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
       <DialogTrigger asChild>
         <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
           <Plus className="h-4 w-4 mr-2" />
-          Agregar Cita
+          Add Quote
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-green-800">Agregar Nueva Cita</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-green-800">Add New Quote</DialogTitle>
           <DialogDescription className="text-green-600">
-            Guarda una nueva cita memorable de libros, películas, series o cualquier fuente que te inspire.
+            Save a new memorable quote from books, movies, series or any source that inspires you.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Texto de la cita */}
+          {/* Quote text */}
           <div className="space-y-2">
             <Label htmlFor="quote-text" className="text-sm font-medium text-green-700">
-              Texto de la cita *
+              Quote Text *
             </Label>
             <Textarea
               id="quote-text"
@@ -300,12 +300,12 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
             />
           </div>
 
-          {/* Tipo, Categoría y Página */}
+          {/* Type, Category and Page */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Tipo - Combobox */}
+            {/* Type - Combobox */}
             <div className="space-y-2 relative" ref={typeInputRef}>
               <Label htmlFor="quote-type" className="text-sm font-medium text-green-700">
-                Tipo
+                Type
               </Label>
               <div className="relative">
                 <Input
@@ -330,7 +330,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
                 </div>
               </div>
 
-              {/* Tipo dropdown */}
+              {/* Type dropdown */}
               {showTypeDropdown && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 shadow-lg rounded-md max-h-60 overflow-y-auto">
                   {filteredTypes.length > 0 ? (
@@ -345,10 +345,10 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
                       </button>
                     ))
                   ) : (
-                    <div className="p-2 text-sm text-gray-500">No se encontraron tipos</div>
+                    <div className="p-2 text-sm text-gray-500">No types found</div>
                   )}
 
-                  {/* Botón para crear nuevo tipo */}
+                  {/* Button to create new type */}
                   {showCreateTypeButton && (
                     <div className="border-t border-green-100">
                       <button
@@ -357,7 +357,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
                         onClick={handleCreateType}
                       >
                         <Plus className="h-3 w-3" />
-                        Crear tipo: "{newQuote.type}"
+                        Create type: "{newQuote.type}"
                       </button>
                     </div>
                   )}
@@ -365,10 +365,10 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
               )}
             </div>
 
-            {/* Categoría - Combobox */}
+            {/* Category - Combobox */}
             <div className="space-y-2 relative" ref={categoryInputRef}>
               <Label htmlFor="quote-category" className="text-sm font-medium text-green-700">
-                Categoría
+                Category
               </Label>
               <div className="relative">
                 <Input
@@ -393,7 +393,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
                 </div>
               </div>
 
-              {/* Categoría dropdown */}
+              {/* Category dropdown */}
               {showCategoryDropdown && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 shadow-lg rounded-md max-h-60 overflow-y-auto">
                   {filteredCategories.length > 0 ? (
@@ -408,10 +408,10 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
                       </button>
                     ))
                   ) : (
-                    <div className="p-2 text-sm text-gray-500">No se encontraron categorías</div>
+                    <div className="p-2 text-sm text-gray-500">No categories found</div>
                   )}
 
-                  {/* Botón para crear nueva categoría */}
+                  {/* Button to create new category */}
                   {showCreateCategoryButton && (
                     <div className="border-t border-green-100">
                       <button
@@ -420,7 +420,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
                         onClick={handleCreateCategory}
                       >
                         <Plus className="h-3 w-3" />
-                        Crear categoría: "{newQuote.category}"
+                        Create category: "{newQuote.category}"
                       </button>
                     </div>
                   )}
@@ -430,7 +430,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
 
             <div className="space-y-2">
               <Label htmlFor="quote-page" className="text-sm font-medium text-green-700">
-                Página
+                Page
               </Label>
               <Input
                 id="quote-page"
@@ -443,7 +443,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
             </div>
           </div>
 
-          {/* Checkbox para favorito */}
+          {/* Favorite checkbox */}
           <Button
             type="button"
             variant={newQuote.isFavorite ? "default" : "outline"}
@@ -455,7 +455,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
             }`}
           >
             <Heart className={`h-4 w-4 ${newQuote.isFavorite ? "fill-white" : ""}`} />
-            {newQuote.isFavorite ? "Favorita" : "Marcar como favorita"}
+            {newQuote.isFavorite ? "Favorite" : "Mark as favorite"}
           </Button>
         </div>
 
@@ -466,7 +466,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
             className="border-green-300 text-green-700 hover:bg-green-50 bg-transparent"
             disabled={isSubmitting}
           >
-            Cancelar
+            Cancel
           </Button>
           <Button
             onClick={handleAddQuote}
@@ -474,7 +474,7 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
             disabled={!newQuote.text.trim() || isSubmitting}
           >
             <Plus className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Guardando..." : "Guardar Cita"}
+            {isSubmitting ? "Saving..." : "Save Quote"}
           </Button>
         </DialogFooter>
       </DialogContent>

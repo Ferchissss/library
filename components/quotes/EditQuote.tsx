@@ -1,444 +1,371 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { Heart, Plus, Search, X, Edit } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-   DialogTrigger
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useState, useRef, useEffect } from "react"
+import { Heart, X, Check, Trash2 } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Quote } from "@/lib/types"
+import { Button } from "@/components/ui/button"
+import type { Quote } from "@/lib/types"
+import { getQuoteCategoryColor } from "@/lib/colors"
+import { BookOpen } from "lucide-react"
 import { toast } from "sonner"
+import { DeleteQuote } from "./DeleteQuote"
 
 type EditQuoteProps = {
   quote: Quote
   onQuoteUpdated: (quote: Quote) => void
-  existingCategories: string[]
+  onQuoteDeleted: (quoteId: number) => void
 }
 
-export function EditQuote({ quote, onQuoteUpdated, existingCategories }: EditQuoteProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuoteProps) {
+  const [isEditingText, setIsEditingText] = useState(false)
+  const [isEditingType, setIsEditingType] = useState(false)
+  const [isEditingCategory, setIsEditingCategory] = useState(false)
+  const [isEditingPage, setIsEditingPage] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [editedQuote, setEditedQuote] = useState({
+
+  const [editValues, setEditValues] = useState({
     text: quote.text,
-    source: "",
-    page: quote.page?.toString() || "",
-    category: quote.category || "",
     type: quote.type || "",
-    isFavorite: quote.favorite || false,
+    category: quote.category || "",
+    page: quote.page?.toString() || "",
   })
 
-  // Estados para el combobox de Tipo
-  const [existingTypes, setExistingTypes] = useState<string[]>([])
-  const [showTypeDropdown, setShowTypeDropdown] = useState(false)
-  const [filteredTypes, setFilteredTypes] = useState<string[]>([])
-  const [showCreateTypeButton, setShowCreateTypeButton] = useState(false)
-  const typeInputRef = useRef<HTMLInputElement>(null)
+  const textRef = useRef<HTMLTextAreaElement>(null)
+  const typeRef = useRef<HTMLInputElement>(null)
+  const categoryRef = useRef<HTMLInputElement>(null)
+  const pageRef = useRef<HTMLInputElement>(null)
 
-  // Estados para el combobox de Categoría
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false)
-  const [filteredCategories, setFilteredCategories] = useState<string[]>([])
-  const [showCreateCategoryButton, setShowCreateCategoryButton] = useState(false)
-  const categoryInputRef = useRef<HTMLInputElement>(null)
-
-  // Cargar tipos existentes cuando se abre el modal
   useEffect(() => {
-    if (isOpen) {
-      fetchExistingTypes()
-      // Resetear el formulario con los datos actuales de la cita
-      setEditedQuote({
-        text: quote.text,
-        source: "",
-        page: quote.page?.toString() || "",
-        category: quote.category || "",
-        type: quote.type || "",
-        isFavorite: quote.favorite || false,
-      })
-    }
-  }, [isOpen, quote])
+    if (isEditingText) textRef.current?.focus()
+  }, [isEditingText])
 
-  // Filtrar tipos cuando cambia el texto
   useEffect(() => {
-    if (editedQuote.type.trim() === "") {
-      setFilteredTypes(existingTypes.slice(0, 10))
-      setShowCreateTypeButton(false)
-    } else {
-      const searchTerm = editedQuote.type.toLowerCase()
-      const filtered = existingTypes.filter(type => 
-        type.toLowerCase().includes(searchTerm)
-      )
-      setFilteredTypes(filtered.slice(0, 10))
-      
-      const exactMatch = existingTypes.some(type => 
-        type.toLowerCase() === searchTerm
-      )
-      setShowCreateTypeButton(!exactMatch && editedQuote.type.trim().length > 0)
-    }
-  }, [editedQuote.type, existingTypes])
+    if (isEditingType) typeRef.current?.focus()
+  }, [isEditingType])
 
-  // Filtrar categorías cuando cambia el texto
   useEffect(() => {
-    if (editedQuote.category.trim() === "") {
-      setFilteredCategories(existingCategories.slice(0, 10))
-      setShowCreateCategoryButton(false)
-    } else {
-      const searchTerm = editedQuote.category.toLowerCase()
-      const filtered = existingCategories.filter(category => 
-        category.toLowerCase().includes(searchTerm)
-      )
-      setFilteredCategories(filtered.slice(0, 10))
-      
-      const exactMatch = existingCategories.some(category => 
-        category.toLowerCase() === searchTerm
-      )
-      setShowCreateCategoryButton(!exactMatch && editedQuote.category.trim().length > 0)
-    }
-  }, [editedQuote.category, existingCategories])
+    if (isEditingCategory) categoryRef.current?.focus()
+  }, [isEditingCategory])
 
-  const fetchExistingTypes = async () => {
-    try {
-      const response = await fetch('/api/quotes')
-      if (!response.ok) throw new Error('Error al cargar tipos')
-      const data = await response.json()
-      
-      const types = [...new Set(data
-        .map((quote: Quote) => quote.type)
-        .filter((type: string | undefined) => type && type.trim() !== "")
-      )].sort()
-      
-      setExistingTypes(types)
-      setFilteredTypes(types.slice(0, 10))
-    } catch (error) {
-      console.error("Error fetching types:", error)
-    }
-  }
-
-  // Handlers para Tipo
-  const handleTypeInputChange = (value: string) => {
-    setEditedQuote(prev => ({ ...prev, type: value }))
-    setShowTypeDropdown(true)
-  }
-
-  const handleTypeSelect = (type: string) => {
-    setEditedQuote(prev => ({ ...prev, type }))
-    setShowTypeDropdown(false)
-  }
-
-  const handleCreateType = () => {
-    setShowTypeDropdown(false)
-  }
-
-  const handleClearType = () => {
-    setEditedQuote(prev => ({ ...prev, type: "" }))
-    setShowTypeDropdown(false)
-  }
-
-  // Handlers para Categoría
-  const handleCategoryInputChange = (value: string) => {
-    setEditedQuote(prev => ({ ...prev, category: value }))
-    setShowCategoryDropdown(true)
-  }
-
-  const handleCategorySelect = (category: string) => {
-    setEditedQuote(prev => ({ ...prev, category }))
-    setShowCategoryDropdown(false)
-  }
-
-  const handleCreateCategory = () => {
-    setShowCategoryDropdown(false)
-  }
-
-  const handleClearCategory = () => {
-    setEditedQuote(prev => ({ ...prev, category: "" }))
-    setShowCategoryDropdown(false)
-  }
-
-  // Close dropdowns cuando se hace click fuera
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (typeInputRef.current && !typeInputRef.current.contains(event.target as Node)) {
-        setShowTypeDropdown(false)
-      }
-      if (categoryInputRef.current && !categoryInputRef.current.contains(event.target as Node)) {
-        setShowCategoryDropdown(false)
-      }
-    }
+    if (isEditingPage) pageRef.current?.focus()
+  }, [isEditingPage])
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const normalizeCategory = (category: string) => {
-    if (!category || !category.trim()) return ""
-    const trimmed = category.trim()
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
-  }
-
-  const handleUpdateQuote = async () => {
-    if (!editedQuote.text.trim()) {
-      toast.error("Por favor, completa el texto de la cita.")
-      return
-    }
-
+  const handleSaveField = async (field: string, value: string) => {
     try {
       setIsSubmitting(true)
 
-      let finalCategory = "Sin categoría"
-      if (editedQuote.category.trim()) {
-        finalCategory = normalizeCategory(editedQuote.category)
-      }
-
-      const quoteData = {
-        text: editedQuote.text.trim(),
-        type: editedQuote.type,
-        category: finalCategory,
-        page: editedQuote.page ? Number.parseInt(editedQuote.page) : null,
-        favorite: editedQuote.isFavorite,
-        book_id: null
+      const updateData: Record<string, any> = {
+        text: field === "text" ? value : editValues.text,
+        type: field === "type" ? value : editValues.type,
+        category: field === "category" ? (value.trim() ? value : "Uncategorized") : editValues.category,
+        page:
+          field === "page"
+            ? value
+              ? Number.parseInt(value)
+              : null
+            : editValues.page
+              ? Number.parseInt(editValues.page)
+              : null,
+        favorite: quote.favorite,
+        book_id: null,
       }
 
       const response = await fetch(`/api/quotes/${quote.id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(quoteData),
+        body: JSON.stringify(updateData),
       })
 
       if (!response.ok) {
-        throw new Error('Error al actualizar la cita')
+        throw new Error("Error updating")
       }
 
       const updatedQuote = await response.json()
+      setEditValues({
+        text: updatedQuote.text,
+        type: updatedQuote.type || "",
+        category: updatedQuote.category || "",
+        page: updatedQuote.page?.toString() || "",
+      })
       onQuoteUpdated(updatedQuote)
-      setIsOpen(false)
 
-      toast.success(`¡Cita actualizada exitosamente!`)
+      // Close editing mode
+      setIsEditingText(false)
+      setIsEditingType(false)
+      setIsEditingCategory(false)
+      setIsEditingPage(false)
+
+      toast.success("Successfully updated")
     } catch (error) {
-      console.error('Error updating quote:', error)
-      toast.error('Error al actualizar la cita')
+      console.error("Error updating quote:", error)
+      toast.error("Error updating")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleCancel = () => {
-    setEditedQuote({
-      text: quote.text,
-      source: "",
-      page: quote.page?.toString() || "",
-      category: quote.category || "",
-      type: quote.type || "",
-      isFavorite: quote.favorite || false,
-    })
-    setIsOpen(false)
+  const handleToggleFavorite = async () => {
+    try {
+      setIsSubmitting(true)
+
+      const updateData = {
+        text: editValues.text,
+        type: editValues.type,
+        category: editValues.category,
+        page: editValues.page ? Number.parseInt(editValues.page) : null,
+        favorite: !quote.favorite, // Change state
+        book_id: null,
+      }
+
+      const response = await fetch(`/api/quotes/${quote.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Error updating favorite")
+      }
+
+      const updatedQuote = await response.json()
+      onQuoteUpdated(updatedQuote)
+      
+      toast.success(updatedQuote.favorite ? "Added to favorites!" : "Removed from favorites")
+    } catch (error) {
+      console.error("Error updating favorite:", error)
+      toast.error("Error updating favorite")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
+  const handleCancel = (field: string) => {
+    if (field === "text") {
+      setEditValues((prev) => ({ ...prev, text: quote.text }))
+      setIsEditingText(false)
+    } else if (field === "type") {
+      setEditValues((prev) => ({ ...prev, type: quote.type || "" }))
+      setIsEditingType(false)
+    } else if (field === "category") {
+      setEditValues((prev) => ({ ...prev, category: quote.category || "" }))
+      setIsEditingCategory(false)
+    } else if (field === "page") {
+      setEditValues((prev) => ({ ...prev, page: quote.page?.toString() || "" }))
+      setIsEditingPage(false)
+    }
+  }
+
+  const categoryColor = getQuoteCategoryColor(quote.category || "")
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-green-800">Editar Cita</DialogTitle>
-          <DialogDescription className="text-green-600">
-            Modifica los detalles de esta cita memorable.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="group relative flex gap-2">
+      <Card className="group hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm border-0 relative overflow-visible flex-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`absolute -top-1 right-2 z-10 h-7 w-7 p-0 transition-all ${
+            quote.favorite 
+              ? "text-red-500 hover:text-red-600 hover:bg-red-50" 
+              : "text-gray-400 hover:text-red-500 hover:bg-red-50"
+          }`}
+          onClick={handleToggleFavorite}
+          disabled={isSubmitting}
+        >
+          <Heart className={`h-4 w-4 ${quote.favorite ? "fill-red-500" : ""}`} />
+        </Button>
 
-        <div className="space-y-6 py-4">
-          {/* Texto de la cita */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-quote-text" className="text-sm font-medium text-green-700">
-              Texto de la cita *
-            </Label>
-            <Textarea
-              id="edit-quote-text"
-              value={editedQuote.text}
-              onChange={(e) => setEditedQuote({ ...editedQuote, text: e.target.value })}
-              rows={4}
-              className="border-green-200 focus:border-green-400 focus:ring-green-400 py-1"
+        <CardContent className="p-1 overflow-visible">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 overflow-visible">
+            <div className="lg:col-span-2">
+              {isEditingText ? (
+                <div className="space-y-2">
+                  <textarea
+                    ref={textRef}
+                    value={editValues.text}
+                    onChange={(e) => setEditValues((prev) => ({ ...prev, text: e.target.value }))}
+                    className="w-full p-1 border-2 border-green-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-green-800  text-lg"
+                    rows={3}
+                    disabled={isSubmitting}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveField("text", editValues.text)}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      disabled={isSubmitting || !editValues.text.trim()}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCancel("text")}
+                      className="border-green-200 text-green-700 hover:bg-green-50"
+                      disabled={isSubmitting}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <blockquote
+                  onClick={() => setIsEditingText(true)}
+                  className="text-lg text-green-800 font-medium leading-relaxed italic border-l-4 border-green-300 pl-4 cursor-pointer hover:bg-green-50 p-2 rounded transition-colors"
+                >
+                  "{editValues.text}"
+                </blockquote>
+              )}
+            </div>
+
+            <div className="space-y-2 overflow-visible">
+              <div className="space-y-1 overflow-visible">
+                <div className="flex items-center gap-2">
+                  {quote.book?.title && <BookOpen className="h-4 w-4 text-green-600" />}
+                  <span className="font-semibold text-green-700">{quote.book?.title || ""}</span>
+                </div>
+                {quote.book?.author && <p className="text-sm text-green-600">by {quote.book.author.name}</p>}
+
+                {/* Container for category and type in the same line */}
+                <div className="flex items-center gap-2">
+                  {isEditingCategory ? (
+                    <div className="flex gap-2 items-center relative z-50">
+                      <Input
+                        ref={categoryRef}
+                        value={editValues.category}
+                        onChange={(e) => setEditValues((prev) => ({ ...prev, category: e.target.value }))}
+                        className="h-6 text-xs border-green-300 focus:border-green-500 focus:ring-green-400"
+                        disabled={isSubmitting}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveField("category", editValues.category)}
+                        className="h-6 w-6 p-1 bg-green-600 hover:bg-green-700"
+                        disabled={isSubmitting}
+                      >
+                        <Check className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCancel("category")}
+                        className="h-6 w-6 p-1 border-green-200 text-green-700 hover:bg-green-50"
+                        disabled={isSubmitting}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => setIsEditingCategory(true)}
+                      className="cursor-pointer hover:scale-105 transition-transform"
+                    >
+                      {editValues.category && (
+                        <Badge
+                          variant="secondary"
+                          className={`${categoryColor.bg} ${categoryColor.text} ${categoryColor.border} border`}
+                        >
+                          {editValues.category}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  {isEditingType ? (
+                    <div className="flex gap-2 items-center relative z-50">
+                      <Input
+                        ref={typeRef}
+                        value={editValues.type}
+                        onChange={(e) => setEditValues((prev) => ({ ...prev, type: e.target.value }))}
+                        className="h-6 text-xs border-green-300 focus:border-green-500 focus:ring-green-400"
+                        disabled={isSubmitting}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveField("type", editValues.type)}
+                        className="h-6 w-6 p-1 bg-green-600 hover:bg-green-700"
+                        disabled={isSubmitting}
+                      >
+                        <Check className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCancel("type")}
+                        className="h-6 w-6 p-1 border-green-200 text-green-700 hover:bg-green-50"
+                        disabled={isSubmitting}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="border-green-300 text-green-600 cursor-pointer hover:bg-green-50"
+                      onClick={() => setIsEditingType(true)}
+                    >
+                      {editValues.type || "No type"}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+        {isEditingPage ? (
+          <div className="absolute bottom-1 right-1 flex gap-1 items-center z-50 bg-white/90 backdrop-blur-sm p-1 rounded-md border">
+            <Input
+              ref={pageRef}
+              type="number"
+              value={editValues.page}
+              onChange={(e) => setEditValues((prev) => ({ ...prev, page: e.target.value }))}
+              className="h-6 w-16 text-xs border-green-300 focus:border-green-500 focus:ring-green-400"
+              disabled={isSubmitting}
+              min="1"
             />
+            <Button
+              size="sm"
+              onClick={() => handleSaveField("page", editValues.page)}
+              className="h-6 w-6 p-0 bg-green-600 hover:bg-green-700"
+              disabled={isSubmitting}
+            >
+              <Check className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleCancel("page")}
+              className="h-6 w-6 p-0 border-green-200 text-green-700 hover:bg-green-50"
+              disabled={isSubmitting}
+            >
+              <X className="h-3 w-3" />
+            </Button>
           </div>
-
-          {/* Tipo, Categoría y Página */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Tipo - Combobox */}
-            <div className="space-y-2 relative" ref={typeInputRef}>
-              <Label htmlFor="edit-quote-type" className="text-sm font-medium text-green-700">
-                Tipo
-              </Label>
-              <div className="relative">
-                <Input
-                  id="edit-quote-type"
-                  value={editedQuote.type}
-                  onChange={(e) => handleTypeInputChange(e.target.value)}
-                  onFocus={() => setShowTypeDropdown(true)}
-                  className="border-green-200 focus:border-green-400 focus:ring-green-400 py-2 h-7"
-                />
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
-                  {editedQuote.type && (
-                    <button
-                      type="button"
-                      onClick={handleClearType}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-
-              {showTypeDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 shadow-lg rounded-md max-h-60 overflow-y-auto">
-                  {filteredTypes.length > 0 ? (
-                    filteredTypes.map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 hover:text-green-700 cursor-pointer transition-colors first:rounded-t-md last:rounded-b-md"
-                        onClick={() => handleTypeSelect(type)}
-                      >
-                        {type}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="p-2 text-sm text-gray-500">No se encontraron tipos</div>
-                  )}
-
-                  {showCreateTypeButton && (
-                    <div className="border-t border-green-100">
-                      <button
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm bg-green-50 text-green-700 hover:bg-green-100 cursor-pointer flex items-center gap-2 rounded-b-md"
-                        onClick={handleCreateType}
-                      >
-                        <Plus className="h-3 w-3" />
-                        Crear tipo: "{editedQuote.type}"
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+        ) : (
+          quote.page && (
+            <div className="absolute bottom-1 right-2 cursor-pointer z-10" onClick={() => setIsEditingPage(true)}>
+              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
+                Page {editValues.page}
+              </span>
             </div>
-
-            {/* Categoría - Combobox */}
-            <div className="space-y-2 relative" ref={categoryInputRef}>
-              <Label htmlFor="edit-quote-category" className="text-sm font-medium text-green-700">
-                Categoría
-              </Label>
-              <div className="relative">
-                <Input
-                  id="edit-quote-category"
-                  value={editedQuote.category}
-                  onChange={(e) => handleCategoryInputChange(e.target.value)}
-                  onFocus={() => setShowCategoryDropdown(true)}
-                  className="border-green-200 focus:border-green-400 focus:ring-green-400 py-2 h-7"
-                />
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
-                  {editedQuote.category && (
-                    <button
-                      type="button"
-                      onClick={handleClearCategory}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-
-              {showCategoryDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 shadow-lg rounded-md max-h-60 overflow-y-auto">
-                  {filteredCategories.length > 0 ? (
-                    filteredCategories.map((category) => (
-                      <button
-                        key={category}
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 hover:text-green-700 cursor-pointer transition-colors first:rounded-t-md last:rounded-b-md"
-                        onClick={() => handleCategorySelect(category)}
-                      >
-                        {category}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="p-2 text-sm text-gray-500">No se encontraron categorías</div>
-                  )}
-
-                  {showCreateCategoryButton && (
-                    <div className="border-t border-green-100">
-                      <button
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm bg-green-50 text-green-700 hover:bg-green-100 cursor-pointer flex items-center gap-2 rounded-b-md"
-                        onClick={handleCreateCategory}
-                      >
-                        <Plus className="h-3 w-3" />
-                        Crear categoría: "{editedQuote.category}"
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-quote-page" className="text-sm font-medium text-green-700">
-                Página
-              </Label>
-              <Input
-                id="edit-quote-page"
-                value={editedQuote.page}
-                onChange={(e) => setEditedQuote({ ...editedQuote, page: e.target.value })}
-                type="number"
-                min="1"
-                className="border-green-200 focus:border-green-400 focus:ring-green-400 py-2 h-7"
-              />
-            </div>
-          </div>
-
-          {/* Checkbox para favorito */}
-          <Button
-            type="button"
-            variant={editedQuote.isFavorite ? "default" : "outline"}
-            onClick={() => setEditedQuote({ ...editedQuote, isFavorite: !editedQuote.isFavorite })}
-            className={`flex items-center gap-2 ${
-              editedQuote.isFavorite 
-                ? "bg-red-500 hover:bg-red-600 text-white" 
-                : "border-green-300 text-green-700 hover:bg-green-50"
-            }`}
-          >
-            <Heart className={`h-4 w-4 ${editedQuote.isFavorite ? "fill-white" : ""}`} />
-            {editedQuote.isFavorite ? "Favorita" : "Marcar como favorita"}
-          </Button>
-        </div>
-
-        <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            className="border-green-300 text-green-700 hover:bg-green-50 bg-transparent"
-            disabled={isSubmitting}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleUpdateQuote}
-            className="bg-green-600 hover:bg-green-700 text-white"
-            disabled={!editedQuote.text.trim() || isSubmitting}
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Actualizando..." : "Actualizar Cita"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          )
+        )}
+      </Card>
+       {/* Delete button outside the card */}
+      <div className="w-0 opacity-0 group-hover:w-8 group-hover:opacity-100 transition-all duration-300 flex items-start pt-2">
+        <DeleteQuote 
+          quote={quote}
+          onQuoteDeleted={onQuoteDeleted}
+        />
+      </div>
+    </div>
   )
 }

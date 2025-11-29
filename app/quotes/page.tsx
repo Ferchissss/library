@@ -2,29 +2,23 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Heart, BookOpen, X, RefreshCw, MoreVertical } from "lucide-react"
+import { Search, X, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
 import { AddQuote } from "@/components/quotes/AddQuote"
 import { Quote } from "@/lib/types"
-import { getQuoteCategoryColor } from "@/lib/colors" // Importar desde tu archivo de colores
 import { Button } from "@/components/ui/button"
 import { EditQuote } from "@/components/quotes/EditQuote"
-import { DeleteQuote } from "@/components/quotes/DeleteQuote"
 
 export default function Quotes() {
   const [quotesData, setQuotesData] = useState<Quote[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("Todas")
-  const [selectedType, setSelectedType] = useState("Todos")
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedQuote, setSelectedQuote] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("All")
+  const [selectedType, setSelectedType] = useState("All")
 
-  // Cargar citas desde la API
+  // Load quotes from API
   useEffect(() => {
     fetchQuotes()
   }, [])
@@ -34,33 +28,33 @@ export default function Quotes() {
       setLoading(true)
       const response = await fetch('/api/quotes')
       if (!response.ok) {
-        throw new Error('Error al cargar las citas')
+        throw new Error('Error loading quotes')
       }
       const data = await response.json()
       setQuotesData(data)
     } catch (error) {
       console.error('Error fetching quotes:', error)
-      alert('Error al cargar las citas')
+      alert('Error loading quotes')
     } finally {
       setLoading(false)
     }
   }
 
-  // Función para manejar nueva cita agregada
+  // Function to handle new quote added
   const handleQuoteAdded = (newQuote: Quote) => {
     setQuotesData(prev => [newQuote, ...prev])
   }
 
-  // Obtener todas las categorías únicas de las citas existentes
-  const existingCategories = Array.from(new Set(quotesData.map((quote) => quote.category).filter(Boolean)))
+  // Get all unique categories from existing quotes
+  const existingCategories = Array.from(new Set(quotesData.map((quote) => quote.category).filter(Boolean) as string[]))
 
   const filteredQuotes = quotesData.filter((quote) => {
     const matchesSearch =
       quote.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (quote.book?.title?.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (quote.book?.author?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesCategory = selectedCategory === "Todas" || quote.category === selectedCategory
-    const matchesType = selectedType === "Todos" || quote.type === selectedType
+    const matchesCategory = selectedCategory === "All" || quote.category === selectedCategory
+    const matchesType = selectedType === "All" || quote.type === selectedType
 
     return matchesSearch && matchesCategory && matchesType
   })
@@ -83,7 +77,7 @@ export default function Quotes() {
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#edf3ec" }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-green-700">Cargando citas...</p>
+          <p className="mt-4 text-green-700">Loading quotes...</p>
         </div>
       </div>
     )
@@ -92,11 +86,11 @@ export default function Quotes() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#edf3ec" }}>
       <div className="container mx-auto px-4 py-8">
-        {/* Header con botón agregar */}
+        {/* Header with add button */}
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-3xl font-bold text-green-800">Citas Literarias</h1>
-            <p className="text-green-600">Tu colección personal de frases memorables</p>
+            <h1 className="text-3xl font-bold text-green-800">Literary Quotes</h1>
+            <p className="text-green-600">Your personal collection of memorable phrases</p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto justify-end">
             <Button
@@ -112,40 +106,39 @@ export default function Quotes() {
               existingCategories={existingCategories}
             />
           </div>
-          
         </div>
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
           <Card className="bg-white/80 backdrop-blur-sm border-0 h-28 flex flex-col justify-center">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-green-700">Total de Citas</CardTitle>
+              <CardTitle className="text-lg text-green-700">Total Quotes</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-green-800">{totalQuotes}</div>
-              <p className="text-sm text-green-600">frases guardadas</p>
+              <p className="text-sm text-green-600">saved phrases</p>
             </CardContent>
           </Card>
 
           <Card className="bg-white/80 backdrop-blur-sm border-0 h-28 flex flex-col justify-center">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-green-700">Favoritas</CardTitle>
+              <CardTitle className="text-lg text-green-700">Favorites</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-green-800">{favoriteQuotes}</div>
-              <p className="text-sm text-green-600">citas destacadas</p>
+              <p className="text-sm text-green-600">highlighted quotes</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filtros y búsqueda */}
+        {/* Filters and search */}
         <div className="mb-4">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-stretch sm:items-center">
             {/* Search */}
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-green-400 h-5 w-5 z-10 pointer-events-none" />
               <Input
-                placeholder="Buscar citas, libros o autores..."
+                placeholder="Search quotes, books or authors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 h-9 sm:h-10 bg-white/30 backdrop-blur-sm border-green-200 rounded-xl text-green-800 placeholder-green-400 focus:ring-green-300 text-sm sm:text-base"
@@ -162,14 +155,14 @@ export default function Quotes() {
 
             {/* Filters - Inline */}
             <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-2">
-              {/* Type Filter - Solo tipos que existen en la DB */}
+              {/* Type Filter - Only types that exist in the DB */}
               <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger className="h-9 bg-white/30 backdrop-blur-sm border-green-200 rounded-xl text-green-800 focus:ring-green-300 text-sm w-32 sm:w-36">
-                  <SelectValue placeholder="Tipo" />
+                  <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent className="bg-white/90 backdrop-blur-sm border-green-200 rounded-xl">
-                  <SelectItem value="Todos" className="text-green-800 focus:bg-green-50 focus:text-green-800">
-                    Todos los tipos
+                  <SelectItem value="All" className="text-green-800 focus:bg-green-50 focus:text-green-800">
+                    All types
                   </SelectItem>
                   {Array.from(new Set(quotesData.map(quote => quote.type).filter(Boolean))).map((type) => (
                     <SelectItem 
@@ -183,14 +176,14 @@ export default function Quotes() {
                 </SelectContent>
               </Select>
 
-              {/* Category Filter - Solo categorías que existen en la DB */}
+              {/* Category Filter - Only categories that exist in the DB */}
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="h-9 bg-white/30 backdrop-blur-sm border-green-200 rounded-xl text-green-800 focus:ring-green-300 text-sm w-32 sm:w-36">
-                  <SelectValue placeholder="Categoría" />
+                  <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent className="bg-white/90 backdrop-blur-sm border-green-200 rounded-xl">
-                  <SelectItem value="Todas" className="text-green-800 focus:bg-green-50 focus:text-green-800">
-                    Todas las categorías
+                  <SelectItem value="All" className="text-green-800 focus:bg-green-50 focus:text-green-800">
+                    All categories
                   </SelectItem>
                   {existingCategories.map((category) => (
                     <SelectItem 
@@ -208,10 +201,10 @@ export default function Quotes() {
               <button
                 onClick={() => {
                   setSearchTerm("")
-                  setSelectedType("Todos")
-                  setSelectedCategory("Todas")
+                  setSelectedType("All")
+                  setSelectedCategory("All")
                 }}
-                disabled={!searchTerm && selectedType === "Todos" && selectedCategory === "Todas"}
+                disabled={!searchTerm && selectedType === "All" && selectedCategory === "All"}
                 className="h-9 px-3 bg-white/30 backdrop-blur-sm border border-green-200 rounded-xl text-green-700 hover:bg-green-50 text-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <X className="h-5 w-5" /> 
@@ -220,122 +213,25 @@ export default function Quotes() {
           </div>
         </div>
 
-        {/* Lista de citas */}
+        {/* Quotes list */}
         <div className="space-y-2">
-          {filteredQuotes.map((quote) => {
-            const categoryColor = getQuoteCategoryColor(quote.category || "")
-            return (
-              <Card
-                key={quote.id}
-                className="group hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm border-0 relative"
-              >
-                {quote.favorite && (
-                  <div className="absolute top-4 right-4 z-10">
-                    <Heart className="h-5 w-5 fill-red-500 text-red-500" />
-                  </div>
-                )}
-                <div className="absolute top-2 right-2 z-10">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-
-                    <DropdownMenuContent align="end" className="bg-white border-blue-200 shadow-lg">
-
-                      {/* EDITAR QUOTE */}
-                      <DropdownMenuItem
-                        className="cursor-pointer text-blue-600 hover:bg-blue-50"
-                        onClick={() => {
-                          setSelectedQuote(quote);    // guardamos la quote actual
-                          setIsEditOpen(true);        // abrimos el dialog
-                        }}
-                      >
-                        Editar
-                      </DropdownMenuItem>
-
-                      {/* ELIMINAR QUOTE */}
-                      <DropdownMenuItem
-                        className="cursor-pointer text-red-600 hover:bg-red-50"
-                        onClick={() => handleQuoteDeleted(quote.id)}
-                      >
-                        Eliminar
-                      </DropdownMenuItem>
-
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                <EditQuote 
-                  quote={quote}
-                  onQuoteUpdated={handleQuoteUpdated}
-                  existingCategories={existingCategories}
-                />
-                <DeleteQuote
-                  quote={quote}
-                  onQuoteDeleted={handleQuoteDeleted}
-                />
-
-                <CardContent className="p-2">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <div className="lg:col-span-2">
-                      <blockquote className="text-lg text-green-800 font-medium leading-relaxed italic border-l-4 border-green-300 pl-4">
-                        "{quote.text}"
-                      </blockquote>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          {quote.book?.title && <BookOpen className="h-4 w-4 text-green-600" />}
-                          <span className="font-semibold text-green-700">
-                            {quote.book?.title || ""}
-                          </span>
-                        </div>
-                        {quote.book?.author && (
-                          <p className="text-sm text-green-600">por {quote.book.author.name}</p>
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          {quote.category && (
-                            <Badge
-                              variant="secondary"
-                              className={`${categoryColor.bg} ${categoryColor.text} ${categoryColor.border} hover:scale-105 transition-transform border`}
-                            >
-                              {quote.category}
-                            </Badge>
-                          )}
-                          <Badge variant="outline" className="border-green-300 text-green-600">
-                            {quote.type || "Sin tipo"}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {quote.page && (
-                    <div className="absolute bottom-2 right-4">
-                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Pág. {quote.page}</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
+          {filteredQuotes.map((quote) => (
+            <EditQuote
+              key={quote.id}
+              quote={quote}
+              onQuoteUpdated={handleQuoteUpdated}
+              onQuoteDeleted={handleQuoteDeleted}
+            />
+          ))}
         </div>
 
         {filteredQuotes.length === 0 && (
           <Card className="bg-white/80 backdrop-blur-sm border-0">
             <CardContent className="text-center py-12">
               <p className="text-gray-500 text-lg">
-                No se encontraron citas que coincidan con los filtros seleccionados.
+                No quotes found matching the selected filters.
               </p>
-              <p className="text-gray-400 text-sm mt-2">Intenta ajustar los filtros o agregar una nueva cita.</p>
+              <p className="text-gray-400 text-sm mt-2">Try adjusting the filters or add a new quote.</p>
             </CardContent>
           </Card>
         )}

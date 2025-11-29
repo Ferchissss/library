@@ -33,15 +33,15 @@ export function DeleteQuote({ quote, onQuoteDeleted }: DeleteQuoteProps) {
       })
 
       if (!response.ok) {
-        throw new Error('Error al eliminar la cita')
+        throw new Error('Error deleting quote')
       }
 
       onQuoteDeleted(quote.id!)
       setIsOpen(false)
-      toast.success('¡Cita eliminada exitosamente!')
+      toast.success('Quote successfully deleted!')
     } catch (error) {
       console.error('Error deleting quote:', error)
-      toast.error('Error al eliminar la cita')
+      toast.error('Error deleting quote')
     } finally {
       setIsDeleting(false)
     }
@@ -49,16 +49,27 @@ export function DeleteQuote({ quote, onQuoteDeleted }: DeleteQuoteProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-md">
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md bg-white/95 backdrop-blur-sm border-0 rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-red-800">Eliminar Cita</DialogTitle>
-          <DialogDescription className="text-red-600">
-            ¿Estás seguro de que quieres eliminar esta cita? Esta acción no se puede deshacer.
+          <DialogTitle className="text-xl font-bold text-green-800">
+            Delete Quote
+          </DialogTitle>
+          <DialogDescription className="text-green-600">
+            Are you sure you want to delete this quote? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
-          <blockquote className="text-sm text-gray-600 italic border-l-4 border-gray-300 pl-3">
+          <blockquote className="text-sm text-green-700 italic border-l-4 border-green-300 pl-3">
             "{quote.text.substring(0, 100)}{quote.text.length > 100 ? '...' : ''}"
           </blockquote>
         </div>
@@ -67,10 +78,10 @@ export function DeleteQuote({ quote, onQuoteDeleted }: DeleteQuoteProps) {
           <Button
             variant="outline"
             onClick={() => setIsOpen(false)}
-            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="border-green-300 text-green-700 hover:bg-green-50 bg-transparent"
             disabled={isDeleting}
           >
-            Cancelar
+            Cancel
           </Button>
           <Button
             onClick={handleDeleteQuote}
@@ -78,7 +89,7 @@ export function DeleteQuote({ quote, onQuoteDeleted }: DeleteQuoteProps) {
             disabled={isDeleting}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            {isDeleting ? "Eliminando..." : "Eliminar Cita"}
+            {isDeleting ? "Deleting..." : "Delete Quote"}
           </Button>
         </DialogFooter>
       </DialogContent>
