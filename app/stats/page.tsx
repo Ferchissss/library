@@ -12,6 +12,7 @@ import { YearlyStats } from '@/components/stats/YearlyStats'
 import { GenreStats } from '@/components/stats/GenreStats'
 import { TimelineVis } from "@/components/stats/TimelineVis"
 import { getIconColor } from "@/lib/colors"
+import { TimelineGantt } from "@/components/stats/TimelineGantt"
 
 interface StatsData {
   challenge: Challenge | null
@@ -256,7 +257,7 @@ export default function Stats() {
 
           {/* Vista Timeline */}
           <TabsContent value="timeline" className="space-y-8">
-            <TimelineVis books={statsData.timelineBooks} />
+            <TimelineVis/>
           </TabsContent>
 
           {/* Vista Géneros */}
