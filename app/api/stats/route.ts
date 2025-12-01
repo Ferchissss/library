@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
     const { data: monthlyData, error: monthlyError } = await supabase
       .from('books')
       .select('id', { count: 'exact' })
-      .eq('year', year)
+      .gte('end_date', `${year}-01-01`) 
+      .lte('end_date', `${year}-12-31`)
       .not('end_date', 'is', null)
 
     const totalBooks = monthlyError ? 0 : monthlyData?.length || 0
@@ -51,7 +52,8 @@ export async function GET(request: NextRequest) {
     const { data: pagesData, error: pagesError } = await supabase
       .from('books')
       .select('pages, start_date, end_date')
-      .eq('year', year)
+      .gte('end_date', `${year}-01-01`)  
+      .lte('end_date', `${year}-12-31`)
       .not('start_date', 'is', null)
       .not('end_date', 'is', null)
       .not('pages', 'is', null)

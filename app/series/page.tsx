@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getQuoteCategoryColor } from "@/lib/colors"
+import ImageDialog from "@/components/series/ImageDialog"
 
 interface Book {
   title: string
@@ -92,11 +93,44 @@ export default function Series() {
     { totalBooks: 0, name: '' } as Series
   )
 
+  const handleUpdateImage = async (seriesId: number, newImageUrl: string) => {
+    try {
+      // Actualizar estado local
+      setSeriesData(prev => 
+        prev.map(series => 
+          series.id === seriesId 
+            ? { ...series, cover: newImageUrl }
+            : series
+        )
+      )
+      
+      // Opcional: Guardar en el backend
+      const response = await fetch('/api/series', {  
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          seriesId,
+          imageUrl: newImageUrl
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to update cover image')
+      }
+    } catch (error) {
+      console.error('Error updating image:', error)
+      throw error
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: "#fbf3dd" }}>
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">Loading series...</div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#fbf3dd" }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto"></div>
+          <p className="mt-4 text-yellow-700">Loading series...</p>
         </div>
       </div>
     )
@@ -238,10 +272,9 @@ export default function Series() {
             >
               <CardHeader>
                 <div className="flex items-start gap-4">
-                  <img
-                    src={series.cover}
-                    alt={series.name}
-                    className="w-16 h-24 object-cover rounded-md shadow-md"
+                  <ImageDialog
+                    series={series} 
+                    onUpdateImage={handleUpdateImage}
                   />
                   <div className="flex-1">
                     <div className="flex items-start justify-between">

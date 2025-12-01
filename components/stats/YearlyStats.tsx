@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { BarChart3 } from "lucide-react"
+import { BarChart3, Star } from "lucide-react"
 
 interface YearlyData {
   year: number
@@ -33,8 +33,9 @@ export function YearlyStats({ data }: YearlyStatsProps) {
             <div key={index} className="border rounded-lg p-4 bg-gradient-to-r from-pink-50 to-rose-50">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-pink-800">{yearData.year}</h3>
-                <Badge variant="outline" className="bg-pink-50 text-pink-700">
-                  ⭐ {yearData.avgRating}/10
+                 <Badge variant="outline" className="bg-pink-50 text-pink-700 flex items-center gap-1">
+                  <Star className="w-4 h-4" />
+                  {yearData.avgRating}
                 </Badge>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">

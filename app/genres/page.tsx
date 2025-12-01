@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { BookOpen, Star, TrendingUp } from "lucide-react"
+import { BookOpen, Star, TrendingUp, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,7 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 import { getGenreColor } from "@/lib/colors"
 import { GenreEditor } from "@/components/genres/GenreEditor"
+import { AddGenre } from "@/components/genres/AddGenre"
 import { toast } from "sonner"
 import type { Genre } from "@/lib/types"
 
@@ -121,6 +122,24 @@ export default function Genres() {
     toast.success("Genre updated successfully")
   }
 
+  const handleGenreAdded = (newGenre: Genre) => {
+    // Add the new genre to the list with default values
+    const newGenreData: GenreData = {
+      id: newGenre.id,
+      name: newGenre.name,
+      slug: newGenre.name.toLowerCase().replace(/\s+/g, '-'),
+      count: 0,
+      percentage: 0,
+      color: getGenreColor(newGenre.name),
+      description: newGenre.description || "Diverse collection of books",
+      books: [],
+      avgRating: 0,
+    }
+    
+    setGenresData(prevGenres => [...prevGenres, newGenreData])
+    toast.success("Genre added successfully")
+  }
+
   const handleEditCancel = () => {
     // No necesitamos hacer nada especial aquí
   }
@@ -165,6 +184,25 @@ export default function Genres() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#fcf1f6" }}>
       <div className="container mx-auto px-4 py-8">
+        {/* Header with buttons */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-pink-800">Genres</h1>
+            <p className="text-pink-600">Explore your literary preferences by genre</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="border-pink-300 text-pink-600 hover:bg-pink-100 hover:text-pink-700 transition-all duration-200 bg-transparent h-9 sm:h-10"
+              size="sm"
+              onClick={fetchGenresData}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <AddGenre onGenreAdded={handleGenreAdded} />
+          </div>
+        </div>
+
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="bg-white/80 backdrop-blur-sm border-0 h-28 flex flex-col justify-center">

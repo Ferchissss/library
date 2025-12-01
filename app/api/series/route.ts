@@ -107,3 +107,33 @@ export async function GET() {
     )
   }
 }
+export async function POST(request: Request) {
+  try {
+    const { seriesId, imageUrl } = await request.json()
+    
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    const { error } = await supabase
+      .from('series')
+      .update({ img_url: imageUrl })
+      .eq('id', seriesId)
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Database error: ${error.message}` },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+    
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
