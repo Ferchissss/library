@@ -1,42 +1,83 @@
-import { NextResponse } from "next/server"
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { prompt } = await req.json()
-    if (!prompt) return NextResponse.json({ error: "Prompt required" }, { status: 400 })
+    const { prompt } = await request.json()
 
-    const hfKey = process.env.HF_API_KEY
-    if (!hfKey) return NextResponse.json({ error: "Missing HF_API_KEY" }, { status: 500 })
-
-    const response = await fetch(
-      "https://router.huggingface.co/stabilityai/stable-diffusion-2-1-mini",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${hfKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          options: { wait_for_model: true }
-        })
-      }
-    )
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("HF error:", errorText)
-      return NextResponse.json({ error: "HF API error", details: errorText }, { status: 500 })
+    if (!prompt) {
+      return NextResponse.json(
+        { error: 'Prompt is required' },
+        { status: 400 }
+      )
     }
 
-    // convertimos la respuesta a base64
-    const arrayBuffer = await response.arrayBuffer()
-    const base64 = Buffer.from(arrayBuffer).toString("base64")
-    const url = `data:image/png;base64,${base64}`
+    // Pollinations.ai - Generate image
+    const encodedPrompt = encodeURIComponent(prompt)
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=768&model=flux&nologo=true&enhance=true`
 
-    return NextResponse.json({ imageUrl: url })
-  } catch (err: any) {
-    console.error(err)
-    return NextResponse.json({ error: "Server error", details: err.message }, { status: 500 })
+    console.log('Generating image...')
+    const response = await fetch(imageUrl)
+    
+    if (!response.ok) {
+      throw new Error('Failed to generate image with Pollinations')
+    }
+
+    // Get the image as blob
+    const imageBlob = await response.blob()
+    console.log('Image generated, size:', imageBlob.size)
+
+    // Configure Supabase
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase not configured')
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Generate unique filename
+    const timestamp = Date.now()
+    const randomString = Math.random().toString(36).substring(7)
+    const fileName = `cover-${timestamp}-${randomString}.jpg`
+
+    console.log('Uploading to Supabase Storage...')
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase
+      .storage
+      .from('series-covers')
+      .upload(fileName, imageBlob, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600',
+        upsert: false
+      })
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError)
+      throw new Error(`Upload failed: ${uploadError.message}`)
+    }
+
+    console.log('Upload successful:', uploadData)
+
+    // Get public URL
+    const { data: publicUrlData } = supabase
+      .storage
+      .from('series-covers')
+      .getPublicUrl(fileName)
+
+    const publicUrl = publicUrlData.publicUrl
+
+    console.log('Public URL:', publicUrl)
+
+    return NextResponse.json({ imageUrl: publicUrl })
+
+  } catch (error) {
+    console.error('Error generating image:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to generate image' },
+      { status: 500 }
+    )
   }
 }

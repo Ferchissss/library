@@ -10,9 +10,8 @@ import { Challenge } from '@/lib/types'
 import { MonthlyStats } from '@/components/stats/MonthlyStats'
 import { YearlyStats } from '@/components/stats/YearlyStats'
 import { GenreStats } from '@/components/stats/GenreStats'
-import { TimelineVis } from "@/components/stats/TimelineVis"
 import { getIconColor } from "@/lib/colors"
-import { TimelineGantt } from "@/components/stats/TimelineGantt"
+import TimelineaA from "@/components/stats/TimelineA"
 
 interface StatsData {
   challenge: Challenge | null
@@ -257,7 +256,7 @@ export default function Stats() {
 
           {/* Vista Timeline */}
           <TabsContent value="timeline" className="space-y-8">
-            <TimelineVis/>
+            <TimelineaA/>
           </TabsContent>
 
           {/* Vista Géneros */}
