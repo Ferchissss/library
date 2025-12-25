@@ -18,11 +18,11 @@ export function MonthlyStats({ data, currentYear }: MonthlyStatsProps) {
   return (
     <Card className="bg-white/80 backdrop-blur-sm border-0">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-pink-800">
+        <CardTitle className="flex items-center gap-2 text-red-800">
           <BarChart3 className="h-5 w-5" />
-          Progreso Mensual {currentYear}
+          Monthly Progress {currentYear}
         </CardTitle>
-        <CardDescription>Libros leídos por mes en el año actual</CardDescription>
+        <CardDescription>Books read per month in the current year</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -35,8 +35,8 @@ export function MonthlyStats({ data, currentYear }: MonthlyStatsProps) {
                 </div>
               </div>
               <div className="text-right text-sm">
-                <div className="font-medium">{monthData.books} libros</div>
-                <div className="text-muted-foreground">{monthData.pages} páginas</div>
+                <div className="font-medium">{monthData.books} books</div>
+                <div className="text-muted-foreground">{monthData.pages} pages</div>
               </div>
             </div>
           ))}

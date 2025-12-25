@@ -1,4 +1,4 @@
-// app/api/stats/route.ts - VERSIÓN COMPLETA
+// app/api/stats/route.ts - CLEAN VERSION
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { selectMainChallenge } from '@/lib/challenge-ia'
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
 
-    // 1. BUSCAR O CREAR DESAFÍO PRINCIPAL
+    // 1. FIND OR CREATE MAIN CHALLENGE
     const { data: challenges, error } = await supabase
       .from('challenges')
       .select('*')
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       mainChallenge = await selectMainChallenge(challenges, year)
     } 
 
-    // 2. CALCULAR PROGRESO DEL DESAFÍO
+    // 2. CALCULATE CHALLENGE PROGRESS
     let progress = 0
     if (mainChallenge?.query_sql) {
       const { data: progressData, error: progressError } = await supabase.rpc('exec_sql', { 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       progress = progressError ? 0 : (progressData?.[0]?.count || 0)
     }
 
-    // 3. PROMEDIO MENSUAL DE LIBROS (AÑO ACTUAL)
+    // 3. MONTHLY BOOK AVERAGE (CURRENT YEAR)
     const { data: monthlyData, error: monthlyError } = await supabase
       .from('books')
       .select('id', { count: 'exact' })
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     const totalBooks = monthlyError ? 0 : monthlyData?.length || 0
     const avgMonthlyBooks = Math.round((totalBooks / 12) * 10) / 10
 
-    // 4. PÁGINAS POR DÍA PROMEDIO (AÑO ACTUAL)
+    // 4. AVERAGE PAGES PER DAY (CURRENT YEAR)
     const { data: pagesData, error: pagesError } = await supabase
       .from('books')
       .select('pages, start_date, end_date')
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         Math.round(totalPagesPerDay.reduce((a, b) => a + b, 0) / totalPagesPerDay.length) : 47
     }
 
-    // 5. TIEMPO PROMEDIO POR LIBRO (TODOS LOS AÑOS)
+    // 5. AVERAGE TIME PER BOOK (ALL YEARS)
     const { data: daysData, error: daysError } = await supabase
       .from('books')
       .select('start_date, end_date')
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
         Math.round(totalDays.reduce((a, b) => a + b, 0) / totalDays.length) : 0
     }
 
-    // 6. VELOCIDAD DE LECTURA (TODOS LOS AÑOS)
+    // 6. READING SPEED (ALL YEARS)
     const { data: speedData, error: speedError } = await supabase
       .from('books')
       .select('pages, start_date, end_date')
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
         Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length) : 0
     }
 
-    // 7. DATOS MENSUALES PARA EL TAB "MENSUAL"
+    // 7. MONTHLY DATA FOR "MONTHLY" TAB
     const currentYear = getCurrentYear()
     const { data: monthlyStatsData } = await supabase
       .from('books')
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
 
     const monthlyDataFormatted = generateMonthlyData(monthlyStatsData || [])
 
-    // 8. DATOS ANUALES HISTÓRICOS PARA EL TAB "POR AÑO"
+    // 8. HISTORICAL YEARLY DATA FOR "BY YEAR" TAB
     const { data: yearlyStatsData } = await supabase
       .from('books')
       .select('end_date, pages, rating')
@@ -126,10 +126,7 @@ export async function GET(request: NextRequest) {
 
     const yearlyDataFormatted = generateYearlyData(yearlyStatsData || [])
 
-    // 9. DATOS PARA TIMELINE
-    console.log('🔍 Iniciando consulta timeline...')
-
-    // Consulta SIMPLE primero para verificar
+    // 9. TIMELINE DATA
     const { data: simpleTimelineData } = await supabase
       .from('books')
       .select('id, title, start_date, end_date, rating, pages')
@@ -137,11 +134,8 @@ export async function GET(request: NextRequest) {
       .not('end_date', 'is', null)
       .order('end_date', { ascending: false })
 
-    console.log('📚 Simple timeline data:', simpleTimelineData)
-
-    // Obtener autores por separado
-    let authorsData = []
-    let genresData = []
+    let authorsData: any[] = []
+    let genresData: any[] = []
 
     if (simpleTimelineData && simpleTimelineData.length > 0) {
       const bookIds = simpleTimelineData.map(book => book.id)
@@ -159,22 +153,16 @@ export async function GET(request: NextRequest) {
       genresData = genres || []
     }
 
-    console.log('👥 Authors data:', authorsData)
-    console.log('🎭 Genres data:', genresData)
-
-    // Combinar datos manualmente
+    // Manually combine data
     const timelineDataWithRelations = simpleTimelineData ? simpleTimelineData.map(book => ({
       ...book,
-      authors: authorsData.find(a => a.id === book.id)?.authors || { name: 'Autor desconocido' },
+      authors: authorsData.find(a => a.id === book.id)?.authors || { name: 'Unknown author' },
       book_genres: genresData.filter(g => g.book_id === book.id) || []
     })) : []
 
-    console.log('✨ Timeline data combinado:', timelineDataWithRelations)
-
     const timelineBooksFormatted = generateTimelineData(timelineDataWithRelations)
-    console.log('✅ Timeline books formateados:', timelineBooksFormatted)
 
-    // 10. ESTADÍSTICAS DE GÉNEROS
+    // 10. GENRE STATISTICS (no longer used in frontend, but kept for compatibility)
     const { data: genreData } = await supabase
       .from('book_genre')
       .select(`
@@ -184,8 +172,7 @@ export async function GET(request: NextRequest) {
       `)
       .gte('books.end_date', `${currentYear}-01-01`)
       .lte('books.end_date', `${currentYear}-12-31`)
-
-    const genreStatsFormatted = generateGenreStats(genreData || [])
+    console.log('Timeline books sample:', timelineBooksFormatted.slice(0, 2))
 
     return NextResponse.json({
       challenge: mainChallenge,
@@ -197,11 +184,9 @@ export async function GET(request: NextRequest) {
       monthlyData: monthlyDataFormatted,
       yearlyData: yearlyDataFormatted,
       timelineBooks: timelineBooksFormatted,
-      genreStats: genreStatsFormatted
     })
 
   } catch (error) {
-    console.error('Error in stats API:', error)
     return NextResponse.json({ 
       challenge: null,
       progress: 0,
@@ -217,9 +202,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Función para generar datos mensuales
+// Function to generate monthly data
 function generateMonthlyData(books: any[]) {
-  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   
   const monthlyStats = months.map((month, index) => {
     const monthBooks = books.filter(book => {
@@ -239,13 +224,13 @@ function generateMonthlyData(books: any[]) {
   return monthlyStats
 }
 
-// Función para generar datos anuales
+// Function to generate yearly data
 function generateYearlyData(books: any[]) {
   const yearsMap = new Map()
   
   books.forEach(book => {
     const endDate = new Date(book.end_date)
-    const year = endDate.getFullYear()  // ← Año de finalización
+    const year = endDate.getFullYear()  // ← Completion year
     
     if (!yearsMap.has(year)) {
       yearsMap.set(year, {
@@ -274,37 +259,16 @@ function generateYearlyData(books: any[]) {
   })).sort((a, b) => b.year - a.year)
 }
 
-// Función para generar datos de timeline
-  function generateTimelineData(books: any[]) {
-    return books.map(book => ({
-      id: book.id,
-      title: book.title,
-      author: book.authors?.name || 'Autor desconocido',
-      start_date: book.start_date, 
-      end_date: book.end_date,
-      dateRead: book.end_date,
-      rating: book.rating || 0,
-      genre: book.book_genres?.[0]?.genres?.name || book.book_genres?.[0]?.name || 'Sin género',
-      pages: book.pages || 0
-    }))
-  }
-
-// Función para generar estadísticas de géneros
-function generateGenreStats(genreData: any[]) {
-  const genreCount = new Map()
-  
-  genreData.forEach(item => {
-    const genreName = item.genres?.name
-    if (genreName) {
-      genreCount.set(genreName, (genreCount.get(genreName) || 0) + 1)
-    }
-  })
-  
-  const total = Array.from(genreCount.values()).reduce((sum, count) => sum + count, 0)
-  
-  return Array.from(genreCount.entries()).map(([genre, count]) => ({
-    genre,
-    count,
-    percentage: Math.round((count / total) * 100)
-  })).sort((a, b) => b.count - a.count)
+// Function to generate timeline data
+function generateTimelineData(books: any[]) {
+  return books.map(book => ({
+    id: book.id,
+    title: book.title,
+    author: book.authors?.name || 'Unknown author',
+    start_date: book.start_date, 
+    end_date: book.end_date,
+    rating: book.rating || 0,
+    genre: book.book_genres?.[0]?.genres?.name || book.book_genres?.[0]?.name || 'No genre',
+    pages: book.pages || 0
+  }))
 }
