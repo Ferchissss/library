@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Heart, X, Check, Trash2 } from "lucide-react"
+import { Heart, X, Check, Trash2, ChevronUp, ChevronDown } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,9 @@ import { getQuoteCategoryColor } from "@/lib/colors"
 import { BookOpen } from "lucide-react"
 import { toast } from "sonner"
 import { DeleteQuote } from "./DeleteQuote"
+import { QuoteMarkdownViewer } from "./QuoteMarkdownViewer"
+import { QuoteTipTapEditor } from "./QuoteTipTapEditor"
+import { QuoteHtmlViewer } from "./QuoteHtmlViewer"
 
 type EditQuoteProps = {
   quote: Quote
@@ -24,6 +27,7 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
   const [isEditingCategory, setIsEditingCategory] = useState(false)
   const [isEditingPage, setIsEditingPage] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const [editValues, setEditValues] = useState({
     text: quote.text,
@@ -52,6 +56,9 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
   useEffect(() => {
     if (isEditingPage) pageRef.current?.focus()
   }, [isEditingPage])
+
+  //Determine whether the quote needs truncation
+  const needsTruncation = editValues.text.length > 200 || editValues.text.split('\n').length > 3
 
   const handleSaveField = async (field: string, value: string) => {
     try {
@@ -185,44 +192,51 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 overflow-visible">
             <div className="lg:col-span-2">
               {isEditingText ? (
-                <div className="space-y-2">
-                  <textarea
-                    ref={textRef}
-                    value={editValues.text}
-                    onChange={(e) => setEditValues((prev) => ({ ...prev, text: e.target.value }))}
-                    className="w-full p-1 border-2 border-green-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-green-800  text-lg"
-                    rows={3}
-                    disabled={isSubmitting}
+                <div className="space-y-3">
+                  <QuoteTipTapEditor
+                    initialContent={editValues.text}
+                    onSave={(content) => handleSaveField("text", content)}
+                    onCancel={() => handleCancel("text")}
+                    isSubmitting={isSubmitting}
                   />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveField("text", editValues.text)}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      disabled={isSubmitting || !editValues.text.trim()}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCancel("text")}
-                      className="border-green-200 text-green-700 hover:bg-green-50"
-                      disabled={isSubmitting}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Cancel
-                    </Button>
-                  </div>
                 </div>
               ) : (
-                <blockquote
-                  onClick={() => setIsEditingText(true)}
-                  className="text-lg text-green-800 font-medium leading-relaxed italic border-l-4 border-green-300 pl-4 cursor-pointer hover:bg-green-50 p-2 rounded transition-colors"
-                >
-                  "{editValues.text}"
-                </blockquote>
+                <div>
+                  <blockquote
+                    onClick={() => setIsEditingText(true)}
+                    className={`cursor-pointer hover:bg-green-50 p-2 rounded transition-colors border-l-4 border-green-300 pl-4 ${
+                      !isExpanded && needsTruncation ? 'line-clamp-3' : ''
+                    }`}
+                  >
+                    <QuoteHtmlViewer
+                      content={editValues.text} 
+                      truncate={!isExpanded && needsTruncation}
+                    />
+                  </blockquote>
+                  
+                  {/* Expand/Collapse button – ONLY for long quotes */}
+                  {needsTruncation && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation() // Prevent blockquote onClick from firing
+                        setIsExpanded(!isExpanded)
+                      }}
+                      className="mt-1 ml-4 text-sm text-green-600 hover:text-green-800 flex items-center gap-1"
+                    >
+                      {isExpanded ? (
+                        <>
+                          <ChevronUp className="h-4 w-4" />
+                          Show less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4" />
+                          Show more
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -352,7 +366,7 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
         ) : (
           quote.page && (
             <div className="absolute bottom-1 right-2 cursor-pointer z-10" onClick={() => setIsEditingPage(true)}>
-              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
+              <span className="text-xs text-gray-400 bg-gray-f100 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
                 Page {editValues.page}
               </span>
             </div>

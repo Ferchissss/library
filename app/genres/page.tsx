@@ -38,7 +38,7 @@ export default function Genres() {
   const fetchGenresData = async () => {
     try {
       setLoading(true)
-      
+
       // Get all genres with their books and description
       const { data: genres, error: genresError } = await supabase
         .from('genres')
@@ -91,10 +91,12 @@ export default function Genres() {
       }).filter(genre => genre.count > 0) || []
 
       // Calculate percentages after having all genres
-      const totalBooks = processedGenres.reduce((sum, genre) => sum + genre.count, 0)
+      const { count: totalUniqueBooks } = await supabase
+        .from('books')
+        .select('*', { count: 'exact', head: true })
       const genresWithPercentages = processedGenres.map(genre => ({
         ...genre,
-        percentage: totalBooks > 0 ? Math.round((genre.count / totalBooks) * 100) : 0
+        percentage: (totalUniqueBooks || 0) > 0 ? Math.round((genre.count / (totalUniqueBooks || 1)) * 100) : 0
       })).sort((a, b) => b.count - a.count)
 
       setGenresData(genresWithPercentages)
@@ -300,9 +302,12 @@ export default function Genres() {
                         {book}
                       </Badge>
                     ))}
-                    {genre.books.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{genre.books.length - 3} more
+                    {genre.count > 3 && (
+                      <Badge 
+                        variant="outline" 
+                        className="text-xs bg-pink-50 border-pink-200 text-pink-700"
+                      >
+                        +{genre.count - 3} {genre.count - 3 === 1 ? 'more' : 'more'}
                       </Badge>
                     )}
                   </div>

@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
       authorsData = authors || []
 
       const { data: genres } = await supabase
-        .from('book_genres')
+        .from('book_genre')
         .select('book_id, genres (name)')
         .in('book_id', bookIds)
       genresData = genres || []
@@ -172,7 +172,6 @@ export async function GET(request: NextRequest) {
       `)
       .gte('books.end_date', `${currentYear}-01-01`)
       .lte('books.end_date', `${currentYear}-12-31`)
-    console.log('Timeline books sample:', timelineBooksFormatted.slice(0, 2))
 
     return NextResponse.json({
       challenge: mainChallenge,

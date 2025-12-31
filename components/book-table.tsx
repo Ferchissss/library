@@ -862,12 +862,16 @@ export function BookTable({ books, quotesMap, refreshData, onBookSelect, onBookU
         confirmVariant="destructive"
       />
       <Card className="bg-white/95 backdrop-blur-sm border-2 overflow-hidden relative rounded-2xl">
-        <div className="overflow-x-auto" ref={tableContainerRef}>
+        <div 
+          className="overflow-x-auto relative"
+          style={{ maxHeight: 'calc(100vh - 100px)' }} 
+          ref={tableContainerRef}
+        >
           {/* GLOBAL OVERLAY for editing */}
           {editingCell && (<div className="fixed inset-0 bg-transparent z-40 cursor-default" onClick={() => setEditingCell(null)} />)}
-          <table ref={tableRef} className="w-full text-sm relative table-fixed">
-            <thead className="bg-gradient-to-r from-slate-50 via-purple-50 to-slate-50 border-b bordes">
-              <tr>
+          <table ref={tableRef} className="w-full text-sm relative table-fixed border-collapse">
+            <thead className="sticky top-0 z-50">
+              <tr className="bg-gradient-to-r from-slate-50 via-purple-50 to-slate-50 border-b bordes">
                 {columns.map((column, index) => (
                   <th
                     key={column.id}

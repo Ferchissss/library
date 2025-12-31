@@ -19,7 +19,7 @@ export default function ImageModal({ isOpen, onClose, imageUrl, alt }: ImageModa
       onClick={onClose}
     >
       <div 
-        className="relative max-w-4xl max-h-full"
+        className="relative w-full max-w-4xl"
         onClick={(e) => e.stopPropagation()}
       >
         <Button
@@ -31,14 +31,16 @@ export default function ImageModal({ isOpen, onClose, imageUrl, alt }: ImageModa
           <X className="h-6 w-6" />
         </Button>
         
-        <img
-          src={imageUrl}
-          alt={alt}
-          className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-        />
+        <div className="h-[70vh] bg-gray-900/50 rounded-t-lg flex items-center justify-center p-4">
+          <img
+            src={imageUrl}
+            alt={alt}
+            className="h-full w-full object-contain"
+          />
+        </div>
         
-        <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3">
-          <p className="text-white text-lg font-semibold text-center">{alt}</p>
+        <div className="bg-black/80 backdrop-blur-sm rounded-b-lg p-4">
+          <p className="text-white text-lg font-semibold text-center truncate">{alt}</p>
         </div>
       </div>
     </div>

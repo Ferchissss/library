@@ -85,6 +85,8 @@ const config: Config = {
       pattern: /(bg|text|border)-(pink|teal|cyan|emerald|lime|amber|rose|violet|sky|slate)-(100|700|300)/,
     },
   ],
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/line-clamp'),
+  ],
 }
 export default config

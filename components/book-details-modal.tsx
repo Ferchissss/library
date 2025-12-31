@@ -28,7 +28,7 @@ interface BookDetailsModalProps {
 
 const availableColors = AVAILABLE_COLORS
 
-// Función para obtener estilos de color consistentes para géneros
+// Function to get consistent color styles for genres
 const getGenreColorStyle = (genreName: string) => {
   const colorIndex = getConsistentColorIndex(genreName, "bookDetailsGenres", availableColors.length)
   const colorClass = availableColors[colorIndex]
@@ -39,7 +39,14 @@ const getGenreColorStyle = (genreName: string) => {
   }
 }
 
-export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,refreshData,}: BookDetailsModalProps) {
+export function BookDetailsModal({
+  book,
+  isOpen,
+  onOpenChange,
+  quotes,
+  onBookUpdate,
+  refreshData,
+}: BookDetailsModalProps) {
   const [editingField, setEditingField] = useState<{ section: string; field: string } | null>(null)
   const [options, setOptions] = useState<Record<string, { value: string; label: string; id?: number }[]>>({})
   const [isAddingQuote, setIsAddingQuote] = useState(false)
@@ -152,7 +159,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
 
       let dbValue = newValue
 
-      // Convertir IDs para campos relacionales
+      // Convert IDs for relational fields
       if (field === "author" || field === "series") {
         if (newValue) {
           const parsedId = Number.parseInt(newValue)
@@ -182,15 +189,15 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
 
       const updatedBook = { ...book }
 
-      // Actualizar el campo correspondiente en el objeto local
+      // Update the corresponding field in the local object
       if (field === "author" && dbValue) {
-        // Buscar el autor en las opciones para obtener el nombre
+        // Find the author in options to get the name
         const authorOption = options.author?.find((a) => a.id === dbValue)
         if (authorOption) {
           updatedBook.author = { id: dbValue, name: authorOption.label }
         }
       } else if (field === "series" && dbValue) {
-        // Buscar la serie en las opciones para obtener el nombre
+        // Find the series in options to get the name
         const seriesOption = options.series?.find((s) => s.id === dbValue)
         if (seriesOption) {
           updatedBook.series = { id: dbValue, name: seriesOption.label }
@@ -200,16 +207,16 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
       } else if (field === "author" && !dbValue) {
         updatedBook.author = undefined
       } else {
-        // Para campos simples, actualizar directamente
+        // For simple fields, update directly
         ;(updatedBook as any)[field] = newValue
       }
 
-      onBookUpdate(updatedBook) // ← Notificar al padre
+      onBookUpdate(updatedBook) // ← Notify parent
 
-      toast.success(`Campo ${field} actualizado`)
+      toast.success(`Field ${field} updated`)
       setEditingField(null)
     } catch (error) {
-      toast.error(`No se pudo actualizar el campo ${field}`)
+      toast.error(`Could not update field ${field}`)
     }
   }
 
@@ -219,12 +226,12 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
     try {
       const numericGenreIds = genreIds.map((id) => Number.parseInt(id)).filter((id) => !isNaN(id))
 
-      // Eliminar relaciones existentes
+      // Remove existing relationships
       const { error: deleteError } = await supabase.from("book_genre").delete().eq("book_id", book.id)
 
       if (deleteError) throw deleteError
 
-      // Crear nuevas relaciones si hay géneros válidos
+      // Create new relationships if there are valid genres
       if (numericGenreIds.length > 0) {
         const genreInserts = numericGenreIds.map((genreId) => ({
           book_id: book.id,
@@ -244,12 +251,12 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
         .filter(Boolean) as { id: number; name: string }[]
 
       const updatedBook = { ...book, genres: updatedGenres }
-      onBookUpdate(updatedBook) // ← Notificar al padre
+      onBookUpdate(updatedBook) // ← Notify parent
 
-      toast.success("Géneros actualizados correctamente")
+      toast.success("Genres updated successfully")
       setEditingField(null)
     } catch (error) {
-      toast.error("No se pudieron actualizar los géneros")
+      toast.error("Could not update genres")
     }
   }
 
@@ -262,13 +269,13 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
 
       if (error) throw error
 
-      // Actualizar el libro localmente
+      // Update the book locally
       const updatedBook = { ...book, favorite: newFavoriteValue }
       onBookUpdate(updatedBook)
 
-      toast.success(newFavoriteValue ? "Libro marcado como favorito" : "Libro desmarcado como favorito")
+      toast.success(newFavoriteValue ? "Book marked as favorite" : "Book unmarked as favorite")
     } catch (error) {
-      toast.error("No se pudo actualizar el favorito")
+      toast.error("Could not update favorite status")
     }
   }
 
@@ -276,7 +283,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
     if (!book) return
 
     try {
-      // Eliminar todas las citas existentes del libro
+      // Delete all existing quotes for the book
       const { error: deleteError } = await supabase
         .from("quotes")
         .delete()
@@ -284,7 +291,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
 
       if (deleteError) throw deleteError
 
-      // Insertar las nuevas citas si hay alguna
+      // Insert new quotes if there are any
       if (quotesToSave.length > 0) {
         const quotesToInsert = quotesToSave.map((quote) => ({
           book_id: book.id,
@@ -297,32 +304,39 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
 
         const { error: insertError } = await supabase
           .from("quotes")
-        .insert(quotesToInsert)
+          .insert(quotesToInsert)
 
-      if (insertError) throw insertError
-    }
+        if (insertError) throw insertError
+      }
 
-    // Actualizar el estado local
-    setCurrentQuotes(quotesToSave)
-    
-    toast.success("Citas actualizadas correctamente")
-    
-    // Refrescar datos si se proporcionó la función
-    if (refreshData) {
-      refreshData()
+      // Update local state
+      setCurrentQuotes(quotesToSave)
+
+      toast.success("Quotes updated successfully")
+
+      // Refresh data if the function was provided
+      if (refreshData) {
+        refreshData()
+      }
+    } catch (error) {
+      console.error("Error saving quotes:", error)
+      toast.error("Error saving quotes")
     }
-  } catch (error) {
-    console.error("Error saving quotes:", error)
-    toast.error("Error al guardar las citas")
   }
-}
 
-  const renderEditableField = (section: string, field: string, label: string, value: any, options: any[] = [], color: "purple" | "blue" | "emerald" = "purple" ) => {
+  const renderEditableField = (
+    section: string,
+    field: string,
+    label: string,
+    value: any,
+    options: any[] = [],
+    color: "purple" | "blue" | "emerald" = "purple"
+  ) => {
     const isEditing = editingField?.section === section && editingField?.field === field
     const colorClasses = {
-      purple: {label: "text-purple-500",text: "text-purple-900",},
-      blue: {label: "text-blue-500", text: "text-blue-900",},
-      emerald: {label: "text-emerald-500",text: "text-emerald-900",}
+      purple: { label: "text-purple-500", text: "text-purple-900" },
+      blue: { label: "text-blue-500", text: "text-blue-900" },
+      emerald: { label: "text-emerald-500", text: "text-emerald-900" },
     }
 
     const colors = colorClasses[color]
@@ -389,7 +403,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
         />
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
           <span className="text-white text-sm font-medium bg-black bg-opacity-50 px-2 py-1 rounded">
-            Cambiar imagen
+            Change image
           </span>
         </div>
       </div>
@@ -435,7 +449,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
           <div className="flex items-center justify-center h-full opacity-60 group-hover:opacity-100 transition-opacity">
             <div className="text-center text-gray-400 group-hover:text-v500 transition-colors">
               <Users className="w-6 h-6 mx-auto mb-1" />
-              <span className="text-xs">Agregar personajes principales</span>
+              <span className="text-xs">Add main characters</span>
             </div>
           </div>
         )}
@@ -478,7 +492,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
           <div className="flex items-center justify-center h-full opacity-60 group-hover:opacity-100 transition-opacity">
             <div className="text-center text-gray-400 group-hover:text-v500 transition-colors">
               <Heart className="w-6 h-6 mx-auto mb-1" />
-              <span className="text-xs">Agregar personaje favorito</span>
+              <span className="text-xs">Add favorite character</span>
             </div>
           </div>
         )}
@@ -494,7 +508,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
     if (isEditing) {
       return (
         <div className="bg-white/60 rounded-lg p-3">
-          <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">Universo</Label>
+          <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">Universe</Label>
           <div className="mt-1">
             <EditableCell
               book={book!}
@@ -514,7 +528,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
         className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
         onClick={() => setEditingField({ section: "info", field: "series" })}
       >
-        <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">Universo</Label>
+        <Label className="text-xs font-semibold text-purple-500 uppercase tracking-wide">Universe</Label>
         <p className="text-sm mt-1 font-semibold text-purple-900">{seriesName}</p>
       </div>
     )
@@ -527,7 +541,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
     if (isEditing) {
       return (
         <div className="bg-white/60 rounded-lg p-3">
-          <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">Densidad de Lectura</Label>
+          <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">Reading Density</Label>
           <div className="mt-1">
             <EditableCell
               book={book!}
@@ -547,11 +561,12 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
         className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
         onClick={() => setEditingField({ section: "details", field: "reading_difficulty" })}
       >
-        <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">Densidad de Lectura</Label>
+        <Label className="text-xs font-semibold text-blue-500 uppercase tracking-wide">Reading Density</Label>
         <p className="text-sm mt-1 font-semibold text-blue-900">{book.reading_difficulty || ""}</p>
       </div>
     )
   }
+
   const renderAuthorField = () => {
     if (!book) return null
     const isEditing = editingField?.section === "left" && editingField?.field === "author"
@@ -593,6 +608,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
       </div>
     )
   }
+
   const renderDateField = (field: "start_date" | "end_date", label: string) => {
     if (!book) return null
     const isEditing = editingField?.section === "dates" && editingField?.field === field
@@ -601,9 +617,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
     if (isEditing) {
       return (
         <div className="bg-white/60 rounded-lg p-3">
-          <Label className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">
-            {label}
-          </Label>
+          <Label className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">{label}</Label>
           <div className="mt-1">
             <EditableCell
               book={book!}
@@ -623,11 +637,9 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
         className="bg-white/60 rounded-lg p-3 cursor-pointer hover:bg-white/80 transition-colors group relative"
         onClick={() => setEditingField({ section: "dates", field })}
       >
-        <Label className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">
-         {label}
-        </Label>
+        <Label className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">{label}</Label>
         <p className="text-sm mt-1 font-bold text-emerald-900">
-          {dateValue ? new Date(dateValue).toLocaleDateString("es-ES") : ""}
+          {dateValue ? new Date(dateValue).toLocaleDateString("en-US") : ""}
         </p>
       </div>
     )
@@ -698,7 +710,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
           <div className="flex items-center justify-center h-full opacity-60 group-hover:opacity-100 transition-opacity">
             <div className="text-center text-gray-400 group-hover:text-v500 transition-colors">
               <PenLine className="w-6 h-6 mx-auto mb-1" />
-              <span className="text-xs">{label || `Agregar ${field === "review" ? "reseña" : "resumen"}`}</span>
+              <span className="text-xs">{label || `Add ${field === "review" ? "review" : "summary"}`}</span>
             </div>
           </div>
         )}
@@ -732,13 +744,13 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
             onClick={() => setEditingField({ section: "left", field: "rating" })}
           >
             {hasRating ? (
-              <StarRating 
-                rating={book.rating!} 
+              <StarRating
+                rating={book.rating!}
                 size={5}
                 className="group-hover:text-v600 transition-colors"
               />
             ) : (
-              <EmptyStarRating 
+              <EmptyStarRating
                 size={5}
                 className="group-hover:text-v600 transition-colors"
               />
@@ -746,7 +758,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
           </div>
         )}
 
-        {/* Favorito (mantener igual) */}
+        {/* Favorite (keep the same) */}
         <FavoriteButton
           isFavorite={book.favorite || false}
           onToggle={handleFavoriteClick}
@@ -756,7 +768,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
       </div>
     )
   }
-  
+
   const renderGenresField = () => {
     if (!book) return null
 
@@ -787,7 +799,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
         onClick={() => setEditingField({ section: "left", field: "genre" })}
       >
         {hasGenres ? (
-          // Usar optional chaining y fallback a array vacío
+          // Use optional chaining and fallback to empty array
           (book.genres || []).map((genre) => (
             <Badge key={genre.id} style={getGenreColorStyle(genre.name)} className="border-0 font-medium px-2 py-1">
               {genre.name}
@@ -810,7 +822,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
-        {/* Overlay que cubre TODO excepto los componentes editables */}
+        {/* Overlay that covers EVERYTHING except editable components */}
         {editingField && (
           <div className="fixed inset-0 bg-transparent z-40 cursor-pointer" onClick={() => setEditingField(null)} />
         )}
@@ -850,8 +862,8 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
                 {[
                   { value: "summary", label: "Information" },
                   { value: "opinion", label: "Summary" },
-                  { value: "characters", label: "Personajes" },
-                  { value: "quotes", label: "Citas" },
+                  { value: "characters", label: "Characters" },
+                  { value: "quotes", label: "Quotes" },
                 ].map((tab) => (
                   <TabsTrigger
                     key={tab.value}
@@ -875,99 +887,100 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
 
               {/* Fixed height content area with scroll */}
               <div className="flex-1 min-h-0">
-                {/* Información */}
+                {/* Information */}
                 <TabsContent value="summary" className="h-full overflow-y-auto">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-                    {/* Información básica */}
+                    {/* Basic information */}
                     <Card className="border-2 border-purple-100 bg-gradient-to-br from-purple-50 to-purple-100 h-fit">
                       <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-lg text-purple-800">
                           <BookOpen className="h-5 w-5 text-purple-600" />
-                          Información del Libro
+                          Book Information
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 gap-3">
                           {renderSeriesField()}
-                          {renderEditableField("info", "type", "Tipo", book.type || "", options.type || [])}
+                          {renderEditableField("info", "type", "Type", book.type || "", options.type || [])}
 
                           <div className="grid grid-cols-2 gap-3">
-                            {renderEditableField("info", "year", "Año", book.year || "", options.year || [])}
-                            {renderEditableField("info", "pages", "Páginas", book.pages || "", [])}
+                            {renderEditableField("info", "year", "Year", book.year || "", options.year || [])}
+                            {renderEditableField("info", "pages", "Pages", book.pages || "", [])}
                           </div>
 
                           {renderEditableField(
                             "info",
                             "publisher",
-                            "Editorial",
+                            "Publisher",
                             book.publisher || "",
-                            options.publisher || [],
+                            options.publisher || []
                           )}
                           {renderEditableField(
                             "info",
                             "language",
-                            "Idioma",
+                            "Language",
                             book.language || "",
-                            options.language || [],
+                            options.language || []
                           )}
                         </div>
                       </CardContent>
                     </Card>
 
-                    {/* Detalles Adicionales */}
+                    {/* Additional Details */}
                     <Card className="border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-100 h-fit">
                       <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-lg text-blue-800">
                           <BookOpen className="h-5 w-5 text-blue-600" />
-                          Detalles Adicionales
+                          Additional Details
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 gap-3">
-                          {renderEditableField("details", "era", "Época", book.era || "", options.era || [], "blue")}
-                          {renderEditableField("details", "format", "Formato", book.format || "", options.format || [], "blue")}
+                          {renderEditableField("details", "era", "Era", book.era || "", options.era || [], "blue")}
+                          {renderEditableField("details", "format", "Format", book.format || "", options.format || [], "blue")}
                           {renderEditableField(
                             "details",
                             "audience",
-                            "Público",
+                            "Audience",
                             book.audience || "",
-                            options.audience || [], "blue"
+                            options.audience || [],
+                            "blue"
                           )}
                           {renderReadingDifficultyField()}
 
                           <div className="grid grid-cols-1 gap-3">
-                            {renderEditableField("details", "awards", "Premios", book.awards || "", [], "blue")}
+                            {renderEditableField("details", "awards", "Awards", book.awards || "", [], "blue")}
                           </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    {/* Fechas y Progreso */}
+                    {/* Dates and Progress */}
                     <Card className="border-2 border-emerald-100 bg-gradient-to-br from-emerald-50 to-green-100 h-fit">
                       <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-lg text-emerald-800">
                           <Calendar className="h-5 w-5 text-emerald-600" />
-                          Fechas
+                          Dates
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {/* Fechas */}
+                        {/* Dates */}
                         <div className="space-y-3">
                           {renderDateField("start_date", "Start Date")}
-                          {renderDateField("end_date", "Fecha de Finalización")}
+                          {renderDateField("end_date", "End Date")}
 
                           {book.start_date && book.end_date && (
                             <div className="bg-white/60 rounded-lg p-3">
                               <Label className="text-xs font-semitero text-emerald-500 uppercase tracking-wide">
-                                Días de Lectura
+                                Reading Days
                               </Label>
                               <p className="text-sm mt-1 font-bold text-emerald-900">
                                 {Math.ceil(
                                   (new Date(book.end_date as string).getTime() -
                                     new Date(book.start_date as string).getTime()) /
-                                    (1000 * 60 * 60 * 24),
+                                    (1000 * 60 * 60 * 24)
                                 )}{" "}
-                                días
+                                days
                               </p>
                             </div>
                           )}
@@ -977,7 +990,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
                   </div>
                 </TabsContent>
 
-                {/* Resumen */}
+                {/* Summary */}
                 <TabsContent value="opinion" className="h-full overflow-y-auto">
                   <Card
                     className={`border-0 shadow-lg h-full ${editingField?.section === "left" && editingField?.field === "summary" ? "bg-white/80" : "bg-white/80 backdrop-blur-sm"}`}
@@ -985,14 +998,14 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
                     <CardHeader>
                       <CardTitle className="text-purple-800 flex items-center gap-2">
                         <File className="h-5 w-5" />
-                        Resumen
+                        Summary
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1">{renderReviewField("summary", "Agregar resumen")}</CardContent>
+                    <CardContent className="flex-1">{renderReviewField("summary", "Add summary")}</CardContent>
                   </Card>
                 </TabsContent>
 
-                {/* Personajes */}
+                {/* Characters */}
                 <TabsContent value="characters" className="h-full overflow-y-auto space-y-6">
                   <Card
                     className={`border-0 ${editingField?.section === "characters" && editingField?.field === "main_characters" ? "bg-white/80" : "bg-white/80 backdrop-blur-sm"}`}
@@ -1000,7 +1013,7 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
                     <CardHeader>
                       <CardTitle className="text-purple-800 flex items-center gap-2">
                         <Users className="h-5 w-5" />
-                        Personajes Principales
+                        Main Characters
                       </CardTitle>
                     </CardHeader>
                     <CardContent>{renderMainCharactersField()}</CardContent>
@@ -1012,26 +1025,26 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
                     <CardHeader>
                       <CardTitle className="text-purple-800 flex items-center gap-2">
                         <Heart className="h-5 w-5" />
-                        Personaje Favorito
+                        Favorite Character
                       </CardTitle>
                     </CardHeader>
                     <CardContent>{renderFavoriteCharacterField()}</CardContent>
                   </Card>
                 </TabsContent>
 
-                {/* Citas */}
+                {/* Quotes */}
                 <TabsContent value="quotes" className="h-full overflow-y-auto">
                   <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg h-full">
                     <CardHeader>
                       <CardTitle className="text-purple-800 flex items-center gap-2">
                         <QuoteIcon className="h-5 w-5" />
-                        Citas Favoritas
+                        Favorite Quotes
                       </CardTitle>
                       <CardDescription className="text-purple-600">
-                        Fragmentos que más me impactaron durante la lectura
+                        Fragments that impacted me the most during reading
                       </CardDescription>
-                      
-                      {/* BOTÓN PARA AGREGAR CITAS */}
+
+                      {/* BUTTON TO ADD QUOTES */}
                       <div className="flex justify-end">
                         <Button
                           onClick={() => setIsAddingQuote(!isAddingQuote)}
@@ -1039,14 +1052,14 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
                           size="sm"
                         >
                           <Plus className="w-4 h-4 mr-2" />
-                          {isAddingQuote ? "Cancelar" : "Agregar Cita"}
+                          {isAddingQuote ? "Cancel" : "Add Quote"}
                         </Button>
                       </div>
                     </CardHeader>
-                    
+
                     <CardContent className="flex-1">
                       <div className="h-full overflow-y-auto space-y-6">
-                        {/* COMPONENTE DE CITAS REUTILIZABLE - SOLO SE MUESTRA CUANDO ESTÁS AGREGANDO */}
+                        {/* REUSABLE QUOTES COMPONENT - ONLY SHOWS WHEN ADDING */}
                         {isAddingQuote ? (
                           <QuotesSection
                             quotes={currentQuotes}
@@ -1054,14 +1067,15 @@ export function BookDetailsModal({book,isOpen,onOpenChange,quotes,onBookUpdate,r
                             className="mb-6"
                           />
                         ) : (
-                          /* LISTA DE CITAS EXISTENTES - SOLO SE MUESTRA CUANDO NO ESTÁS AGREGANDO */
-                          currentQuotes.length > 0 && currentQuotes.map((quote) => (
+                          /* EXISTING QUOTES LIST - ONLY SHOWS WHEN NOT ADDING */
+                          currentQuotes.length > 0 &&
+                          currentQuotes.map((quote) => (
                             <div
                               key={quote.id}
-                              className="border-l-4 border-purple-300 pl-4 py-2 bg-purple-50/50 rounded-r-lg"
+                              className="border-l-4 border-purple-300 pl-4 py-2 bg-purple-50/50 rounded-r-lg" 
                             >
-                              <MarkdownViewer content={`"${quote.text}"`} />
-                              {quote.page && <div className="text-sm text-purple-600 mt-1">Página {quote.page}</div>}
+                              <MarkdownViewer content={`${quote.text}`} />
+                              {quote.page && <div className="text-sm text-purple-600 mt-1">Page {quote.page}</div>}
                               {quote.category && (
                                 <Badge variant="outline" className="mt-2 text-xs">
                                   {quote.category}

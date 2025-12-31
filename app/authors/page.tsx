@@ -107,7 +107,7 @@ export default function Authors() {
             )
           )
         `)
-        .order("name")
+        .order("id", { ascending: false })
 
       if (authorsError) {
         console.error("Error fetching authors:", authorsError)
@@ -245,6 +245,7 @@ export default function Authors() {
 
     return matchesSearch && matchesContinent && matchesStatus && matchesBooks
   })
+  .sort((a, b) => b.id - a.id)
 
   // Calculate statistics
   const totalAuthors = authorsData.length
@@ -252,6 +253,12 @@ export default function Authors() {
   const avgRating = totalAuthors > 0 ? authorsData.reduce((sum, author) => sum + author.avgRating, 0) / totalAuthors : 0
   const aliveAuthors = authorsData.filter((author) => author.isAlive).length
   const continents = [...new Set(authorsData.map((author) => author.continent))].length
+
+  const mostReadAuthor = authorsData.length > 0 
+  ? authorsData.reduce((most, current) => 
+      current.books > most.books ? current : most
+    ) 
+  : null
 
   if (loading) {
     return (
@@ -420,7 +427,7 @@ export default function Authors() {
                       className="h-16 w-16 cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => author.img_url && setSelectedAuthorImage({url: author.img_url, name: author.name})}
                     >
-                      <AvatarImage src={author.img_url || "/placeholder.svg?height=60&width=60"} alt={author.name} />
+                      <AvatarImage src={author.img_url || "/placeholder.svg?height=60&width=60"} className="object-cover" />
                       <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-lg">
                         {author.name
                           .split(" ")
@@ -604,18 +611,18 @@ export default function Authors() {
                 <h3 className="font-semibold">Most Read Author</h3>
                 <div className="flex items-center gap-3">
                   <Avatar>
-                    <AvatarImage src={authorsData[0]?.img_url || "/placeholder.svg"} />
+                    <AvatarImage src={mostReadAuthor?.img_url || "/placeholder.svg"} />
                     <AvatarFallback className="bg-blue-100 text-blue-600">
-                      {authorsData[0]?.name
+                      {mostReadAuthor?.name
                         ?.split(" ")
                         .map((n) => n[0])
                         .join("") || "N/A"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{authorsData[0]?.name || "None"}</p>
+                    <p className="font-medium">{mostReadAuthor?.name || "None"}</p>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      {authorsData[0]?.books || 0} books • {authorsData[0]?.avgRating || 0}
+                      {mostReadAuthor?.books || 0} books • {mostReadAuthor?.avgRating || 0}
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                     </p>
                   </div>

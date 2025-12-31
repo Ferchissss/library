@@ -30,6 +30,7 @@ export default function GenreBooksPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const [isEditingGenre, setIsEditingGenre] = useState(false)
+  const [totalAllBooks, setTotalAllBooks] = useState(0)
 
   useEffect(() => {
     fetchGenreData()
@@ -99,6 +100,11 @@ export default function GenreBooksPage() {
         
         setBooks(booksData)
       }
+      const { count: totalCount } = await supabase
+      .from('books')
+      .select('*', { count: 'exact', head: true })
+    
+    setTotalAllBooks(totalCount || 0)
     } catch (error) {
       console.error("Error:", error)
     } finally {
@@ -331,7 +337,7 @@ export default function GenreBooksPage() {
                   • Average rating: <strong>{avgRating}/10</strong> stars
                 </p>
                 <p className="leading-relaxed">
-                  • Represents <strong>{((totalBooks / 50) * 100).toFixed(1)}%</strong> of your total library
+                  • Represents <strong>{((totalBooks / totalAllBooks) * 100).toFixed(1)}%</strong> of your total library
                 </p>
               </div>
             </div>
