@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Heart, X, Check, Trash2, ChevronUp, ChevronDown } from "lucide-react"
+import { Heart, X, Check, Trash2, ChevronUp, ChevronDown, Save } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -11,9 +11,9 @@ import { getQuoteCategoryColor } from "@/lib/colors"
 import { BookOpen } from "lucide-react"
 import { toast } from "sonner"
 import { DeleteQuote } from "./DeleteQuote"
-import { QuoteMarkdownViewer } from "./QuoteMarkdownViewer"
 import { QuoteTipTapEditor } from "./QuoteTipTapEditor"
 import { QuoteHtmlViewer } from "./QuoteHtmlViewer"
+import { MultiSelect } from "../MultiSelect"
 
 type EditQuoteProps = {
   quote: Quote
@@ -28,6 +28,9 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
   const [isEditingPage, setIsEditingPage] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [currentEditorContent, setCurrentEditorContent] = useState(quote.text)
+  const [typeOptions, setTypeOptions] = useState<{ value: string; label: string }[]>([])  
+  const [categoryOptions, setCategoryOptions] = useState<{ value: string; label: string }[]>([])
 
   const [editValues, setEditValues] = useState({
     text: quote.text,
@@ -56,6 +59,35 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
   useEffect(() => {
     if (isEditingPage) pageRef.current?.focus()
   }, [isEditingPage])
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const response = await fetch('/api/quotes')
+        if (!response.ok) throw new Error('Error loading options')
+        const data: Quote[] = await response.json()
+        
+        // Extraer tipos únicos
+        const types = [...new Set(data
+          .map((q) => q.type)
+          .filter((type): type is string => Boolean(type && type.trim() !== ""))
+        )].sort()
+        
+        // Extraer categorías únicas
+        const categories = [...new Set(data
+          .map((q) => q.category)
+          .filter((category): category is string => Boolean(category && category.trim() !== ""))
+        )].sort()
+        
+        setTypeOptions(types.map(type => ({ value: type, label: type })))
+        setCategoryOptions(categories.map(category => ({ value: category, label: category })))
+      } catch (error) {
+        console.error("Error fetching options:", error)
+      }
+    }
+    
+    fetchOptions()
+  }, [])
 
   //Determine whether the quote needs truncation
   const needsTruncation = editValues.text.length > 200 || editValues.text.split('\n').length > 3
@@ -195,10 +227,30 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
                 <div className="space-y-3">
                   <QuoteTipTapEditor
                     initialContent={editValues.text}
-                    onSave={(content) => handleSaveField("text", content)}
+                    onSave={(content) => setCurrentEditorContent(content)}
                     onCancel={() => handleCancel("text")}
                     isSubmitting={isSubmitting}
                   />
+                  {/* Buttons */}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        onClick={() => handleSaveField("text", currentEditorContent)} 
+                        className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                        disabled={isSubmitting}
+                      >
+                        <Save className="h-4 w-4" />
+                        Save changes
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleCancel("text")}
+                        className="border-green-200 text-green-700 hover:bg-green-50 flex items-center gap-2"
+                        disabled={isSubmitting}
+                      >
+                        <X className="h-4 w-4" />
+                        Cancel
+                      </Button>
+                    </div>
                 </div>
               ) : (
                 <div>
@@ -252,13 +304,17 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
                 <div className="flex items-center gap-2">
                   {isEditingCategory ? (
                     <div className="flex gap-2 items-center relative z-50">
-                      <Input
-                        ref={categoryRef}
-                        value={editValues.category}
-                        onChange={(e) => setEditValues((prev) => ({ ...prev, category: e.target.value }))}
-                        className="h-6 text-xs border-green-300 focus:border-green-500 focus:ring-green-400"
-                        disabled={isSubmitting}
-                      />
+                      <div className="min-w-[120px]">
+                        <MultiSelect
+                          options={categoryOptions}
+                          selected={editValues.category ? [editValues.category] : []}
+                          onChange={(selected) => setEditValues((prev) => ({ ...prev, category: selected[0] || "" }))}
+                          placeholder="Select category"
+                          singleSelect
+                          creatable
+                          className="text-xs h-6"
+                        />
+                      </div>
                       <Button
                         size="sm"
                         onClick={() => handleSaveField("category", editValues.category)}
@@ -295,13 +351,17 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
 
                   {isEditingType ? (
                     <div className="flex gap-2 items-center relative z-50">
-                      <Input
-                        ref={typeRef}
-                        value={editValues.type}
-                        onChange={(e) => setEditValues((prev) => ({ ...prev, type: e.target.value }))}
-                        className="h-6 text-xs border-green-300 focus:border-green-500 focus:ring-green-400"
-                        disabled={isSubmitting}
-                      />
+                      <div className="min-w-[120px]">
+                        <MultiSelect
+                          options={typeOptions}
+                          selected={editValues.type ? [editValues.type] : []}
+                          onChange={(selected) => setEditValues((prev) => ({ ...prev, type: selected[0] || "" }))}
+                          placeholder="Select type"
+                          singleSelect
+                          creatable
+                          className="text-xs h-6"
+                        />
+                      </div>
                       <Button
                         size="sm"
                         onClick={() => handleSaveField("type", editValues.type)}
@@ -335,7 +395,7 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
           </div>
         </CardContent>
         {isEditingPage ? (
-          <div className="absolute bottom-1 right-1 flex gap-1 items-center z-50 bg-white/90 backdrop-blur-sm p-1 rounded-md border">
+          <div className="absolute bottom-1 right-1 flex gap-1 items-center z-50 bg-white/90 backdrop-blur-sm p-1 rounded-md border shadow-sm">
             <Input
               ref={pageRef}
               type="number"
@@ -344,6 +404,7 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
               className="h-6 w-16 text-xs border-green-300 focus:border-green-500 focus:ring-green-400"
               disabled={isSubmitting}
               min="1"
+              placeholder="Page"
             />
             <Button
               size="sm"
@@ -364,13 +425,37 @@ export function EditQuote({ quote, onQuoteUpdated, onQuoteDeleted }: EditQuotePr
             </Button>
           </div>
         ) : (
-          quote.page && (
-            <div className="absolute bottom-1 right-2 cursor-pointer z-10" onClick={() => setIsEditingPage(true)}>
-              <span className="text-xs text-gray-400 bg-gray-f100 px-2 py-1 rounded hover:bg-gray-200 transition-colors">
-                Page {editValues.page}
-              </span>
-            </div>
-          )
+          <div className="absolute bottom-1 right-2 cursor-pointer z-10">
+            {/* IF exist page: it always show  */}
+            {editValues.page ? (
+              <div className="flex items-center">
+                <span 
+                  className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 transition-colors"
+                  onClick={() => setIsEditingPage(true)}
+                >
+                  Page {editValues.page}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingPage(true)}
+                  className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                >
+                  Edit
+                </Button>
+              </div>
+            ) : (
+              /* if there isn't: buttom in hover*/
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditingPage(true)}
+                className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm border"
+              >
+                + Add page
+              </Button>
+            )}
+          </div>
         )}
       </Card>
        {/* Delete button outside the card */}

@@ -5,11 +5,11 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MultiSelect } from "@/components/MultiSelect"
-import { MarkdownEditor } from "./MarkdownEditor"
-import { MarkdownViewer } from "./MarkdownViewer"
 import { Edit, Plus, X } from "lucide-react"
 import { supabase } from "@/lib/supabaseClient"
 import type { Quote } from "@/lib/types"  
+import { QuotesEditor } from "./QuotesEditor"
+import { QuotesViewer } from "./QuotesViewer"
 
 interface QuotesSectionProps {
   quotes: Quote[]
@@ -87,10 +87,11 @@ export function QuotesSection({ quotes, onQuotesChange, className = "" }: Quotes
         {/* Input for new quote */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-2">
-            <MarkdownEditor
-              value={quoteInput.text}
-              onChange={(value) => setQuoteInput((prev) => ({ ...prev, text: value }))}
-              placeholder="Write the quote (use Markdown for formatting)"
+            <QuotesEditor
+              initialContent={quoteInput.text}
+              onSave={(htmlContent) => setQuoteInput((prev) => ({ ...prev, text: htmlContent }))}
+              placeholder="Write the quote..."
+              height="sm"
             />
           </div>
           <div className="space-y-2">
@@ -100,14 +101,6 @@ export function QuotesSection({ quotes, onQuotesChange, className = "" }: Quotes
               onChange={(e) => setQuoteInput((prev) => ({ ...prev, page: e.target.value }))}
               placeholder="Page"
               className="input"
-            />
-            <MultiSelect
-              options={quoteTypesOptions}
-              selected={quoteInput.type ? [quoteInput.type] : []}
-              onChange={(selected) => setQuoteInput((prev) => ({ ...prev, type: selected[0] || "" }))}
-              placeholder="Type"
-              singleSelect
-              creatable
             />
             <MultiSelect
               options={quoteCategoriesOptions}
@@ -125,6 +118,7 @@ export function QuotesSection({ quotes, onQuotesChange, className = "" }: Quotes
           onClick={addQuote} 
           size="sm" 
           className="button2"
+          disabled={!quoteInput.text.trim()}
         >
           <Plus className="w-4 h-4 mr-1" />
           Add Quote
@@ -178,10 +172,11 @@ function QuoteItem({ quote, index, onUpdate, onRemove, typesOptions, categoriesO
   if (isEditing) {
     return (
       <div className="bg-v50 p-3 rounded-lg space-y-2">
-        <MarkdownEditor
-          value={editQuote.text}
-          onChange={(value) => setEditQuote(prev => ({ ...prev, text: value }))}
-          placeholder="Write the quote"
+        <QuotesEditor
+          initialContent={editQuote.text}
+          onSave={(htmlContent) => setEditQuote(prev => ({ ...prev, text: htmlContent }))}
+          placeholder="Edit the quote..."
+          height="sm"
         />
         <div className="grid grid-cols-3 gap-2">
           <Input
@@ -193,14 +188,6 @@ function QuoteItem({ quote, index, onUpdate, onRemove, typesOptions, categoriesO
             }))}
             placeholder="Page"
             className="input"
-          />
-          <MultiSelect
-            options={typesOptions}
-            selected={editQuote.type ? [editQuote.type] : []}
-            onChange={(selected) => setEditQuote(prev => ({ ...prev, type: selected[0] || "" }))}
-            placeholder="Type"
-            singleSelect
-            creatable
           />
           <MultiSelect
             options={categoriesOptions}
@@ -226,10 +213,12 @@ function QuoteItem({ quote, index, onUpdate, onRemove, typesOptions, categoriesO
     <div className="bg-v50 p-3 rounded-lg text-sm">
       <div className="flex justify-between items-start gap-2">
         <div className="flex-1">
-          <MarkdownViewer content={quote.text} />
+          <QuotesViewer
+            content={quote.text}
+            className="text-sm"
+          />
           <div className="flex gap-2 mt-1 text-xs text-gray-500">
             {quote.page && <span>Page {quote.page}</span>}
-            {quote.type && <span>• {quote.type}</span>}
             {quote.category && <span>• {quote.category}</span>}
           </div>
         </div>

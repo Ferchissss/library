@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 import type { Book, Quote } from "@/lib/types"
-import { MarkdownViewer } from "./MarkdownViewer"
 import { AVAILABLE_COLORS, getConsistentColorIndex } from "@/lib/colors"
 import { useState, useEffect } from "react"
 import { EditableCell } from "./EditableCell"
@@ -16,6 +15,7 @@ import { toast } from "sonner"
 import { Button } from "./ui/button"
 import { StarRating, EmptyStarRating, FavoriteButton } from "./book-components"
 import { QuotesSection } from "./QuotesSection"
+import { QuotesViewer } from "./QuotesViewer"
 
 interface BookDetailsModalProps {
   book: Book | null
@@ -297,7 +297,7 @@ export function BookDetailsModal({
           book_id: book.id,
           text: quote.text,
           page: quote.page ?? null,
-          type: quote.type || null,
+          type: "Book", 
           category: quote.category || null,
           favorite: false,
         }))
@@ -1074,7 +1074,10 @@ export function BookDetailsModal({
                               key={quote.id}
                               className="border-l-4 border-purple-300 pl-4 py-2 bg-purple-50/50 rounded-r-lg" 
                             >
-                              <MarkdownViewer content={`${quote.text}`} />
+                              <QuotesViewer
+                                content={quote.text}
+                                className="text-sm"
+                              />
                               {quote.page && <div className="text-sm text-purple-600 mt-1">Page {quote.page}</div>}
                               {quote.category && (
                                 <Badge variant="outline" className="mt-2 text-xs">

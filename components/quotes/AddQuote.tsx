@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { Quote } from "@/lib/types"
+import { QuoteTipTapEditor } from "./QuoteTipTapEditor"
 
 type AddQuoteProps = {
   onQuoteAdded: (quote: Quote) => void
@@ -285,18 +286,15 @@ export function AddQuote({ onQuoteAdded, existingCategories }: AddQuoteProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 py-2">
           {/* Quote text */}
           <div className="space-y-2">
-            <Label htmlFor="quote-text" className="text-sm font-medium text-green-700">
-              Quote Text *
-            </Label>
-            <Textarea
-              id="quote-text"
-              value={newQuote.text}
-              onChange={(e) => setNewQuote({ ...newQuote, text: e.target.value })}
-              rows={4}
-              className="border-green-200 focus:border-green-400 focus:ring-green-400 py-1"
+            <QuoteTipTapEditor
+              initialContent={newQuote.text}
+              onSave={(htmlContent) => {
+                setNewQuote(prev => ({ ...prev, text: htmlContent }))
+              }}
+              isSubmitting={isSubmitting}
             />
           </div>
 
