@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { ViewModeProvider } from "@/components/view-mode-provider"
-import { BookOpen, } from "lucide-react"
 import "../styles/globals.css"
 import { Toaster } from 'sonner'
 import { NavigationMenu } from "@/components/navigation-menu"
@@ -10,9 +9,12 @@ import { NavigationMenu } from "@/components/navigation-menu"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "My Library - Personal Reading Platform",
+  title: "Nook - Personal Reading Platform",
   description: "Your personal space to manage and organize your readings",
   generator: "v0.dev",
+  icons: {
+    icon: '/icon.svg', 
+  },
 }
 
 export default function RootLayout({
@@ -27,15 +29,10 @@ export default function RootLayout({
         <ViewModeProvider>
           <header className="border-b bg-background relative">
             <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-6 w-6 text-primary" />
-                <span className="font-semibold text-lg">My Library</span>
-              </div>
-
+              {/* NavigationMenu ahora maneja TODO: logo + menú */}
               <NavigationMenu />
             </div>
           </header>
-
           <main className="flex-1 overflow-auto">{children}</main>
         </ViewModeProvider>
       </body>

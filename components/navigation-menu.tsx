@@ -1,4 +1,3 @@
-// components/navigation-menu.tsx
 'use client'
 
 import { useState } from "react"
@@ -9,46 +8,59 @@ import {
   Menu, X 
 } from "lucide-react"
 
+// Configuración con tus nombres de SVG
 const menuItems = [
   {
-    title: "My Library",
+    title: "Mi Biblioteca",
     url: "/",
     icon: BookOpen,
+    headerIcon: "/library.svg",
+    headerLogo: "/library1.svg",
     color: "#f8f3fc",
     darkColor: "#8b5cf6",
   },
   {
-    title: "Genres",
+    title: "Géneros",
     url: "/genres",
     icon: Tag,
+    headerIcon: "/genre.svg",
+    headerLogo: "/genre1.svg",
     color: "#fcf1f6",
     darkColor: "#ec4899",
   },
   {
-    title: "Authors",
+    title: "Autores",
     url: "/authors",
     icon: Users,
+    headerIcon: "/author.svg",
+    headerLogo: "/author1.svg",
     color: "#e7f3f8",
     darkColor: "#0ea5e9",
   },
   {
-    title: "Statistics",
+    title: "Estadísticas",
     url: "/stats",
     icon: BarChart3,
+    headerIcon: "/static.svg",
+    headerLogo: "/static1.svg",
     color: "#fdebec",
     darkColor: "#ef4444",
   },
   {
-    title: "Quotes",
+    title: "Citas",
     url: "/quotes",
     icon: Quote,
+    headerIcon: "/quote.svg",
+    headerLogo: "/quote1.svg",
     color: "#edf3ec",
     darkColor: "#22c55e",
   },
   {
-    title: "Challenges",
+    title: "Desafíos",
     url: "/challenges",
     icon: Trophy,
+    headerIcon: "/challenge.svg",
+    headerLogo: "/challenge1.svg",
     color: "#fbecdd",
     darkColor: "#f59e0b",
   },
@@ -56,6 +68,8 @@ const menuItems = [
     title: "Series",
     url: "/series",
     icon: Layers,
+    headerIcon: "/serie.svg",
+    headerLogo: "/serie1.svg",
     color: "#fbf3dd",
     darkColor: "#eab308",
   },
@@ -64,11 +78,31 @@ const menuItems = [
 export function NavigationMenu() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  
+  // Encontrar el item activo actual
+  const activeItem = menuItems.find(item => 
+    pathname === item.url || 
+    (item.url !== "/" && pathname.startsWith(item.url))
+  ) || menuItems[0]
 
   return (
     <>
-      {/* Menú Desktop - solo reducido el padding del contenedor */}
-      <nav className="hidden md:flex items-center gap-2 p-1 rounded-lg overflow-x-auto max-w-full" // ← Cambiado p-3 a p-2
+      {/* Logo dinámico del header - Espaciado responsivo */}
+      <div className="flex items-center gap-2 flex-shrink-0 pl-4 md:pl-8 lg:pl-44">
+        <img 
+          src={activeItem.headerIcon} 
+          alt={`${activeItem.title} Icon`} 
+          className="h-6 w-6" 
+        />
+        <img 
+          src={activeItem.headerLogo} 
+          alt={`${activeItem.title} Logo`} 
+          className="h-6 w-auto hidden sm:block" 
+        />
+      </div>
+
+      {/* Menú de Escritorio */}
+      <nav className="hidden md:flex items-center gap-2 p-1 rounded-lg overflow-x-auto max-w-full mr-4 md:mr-8 lg:mr-44" 
         style={{ backgroundColor: `${menuItems[0].color}30` }}>
         {menuItems.map((item) => {
           const isActive = pathname === item.url || 
@@ -99,12 +133,12 @@ export function NavigationMenu() {
         })}
       </nav>
 
-      {/* Botón móvil y menú móvil - solo reducido padding del contenedor */}
-      <div className="md:hidden">
+      {/* Botón móvil y menú móvil */}
+      <div className="md:hidden mr-4">
         <button
           className="p-2 rounded-lg transition-colors hover:bg-accent"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Toggle menu"
+          aria-label="Alternar menú"
         >
           {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
