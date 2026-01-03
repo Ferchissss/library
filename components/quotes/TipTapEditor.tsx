@@ -128,7 +128,7 @@ export function TipTapEditor({
     content: initialContent,
     editorProps: {
       attributes: {
-        class: `max-w-none focus:outline-none min-h-[120px] p-3 text-${currentTheme.placeholder} [&_*]:text-${currentTheme.placeholder}`,
+        class: `max-w-none focus:outline-none min-h-[120px] p-1 text-${currentTheme.placeholder} [&_*]:text-${currentTheme.placeholder}`,
       },
     },
     onUpdate: ({ editor }) => {
@@ -427,7 +427,7 @@ export function TipTapEditor({
       <div className={`border border-${currentTheme.border} rounded-lg overflow-hidden`}>
         <EditorContent 
           editor={editor}
-          className={`overflow-y-auto p-3 tiptap ${heightClasses[height]}`}
+          className={`overflow-y-auto p-1 tiptap ${heightClasses[height]}`} 
         />
       </div>
 

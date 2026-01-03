@@ -8,10 +8,10 @@ import {
   Menu, X 
 } from "lucide-react"
 
-// Configuración con tus nombres de SVG
+// Configuration with your SVG names
 const menuItems = [
   {
-    title: "Mi Biblioteca",
+    title: "My Library",
     url: "/",
     icon: BookOpen,
     headerIcon: "/library.svg",
@@ -20,7 +20,7 @@ const menuItems = [
     darkColor: "#8b5cf6",
   },
   {
-    title: "Géneros",
+    title: "Genres",
     url: "/genres",
     icon: Tag,
     headerIcon: "/genre.svg",
@@ -29,7 +29,7 @@ const menuItems = [
     darkColor: "#ec4899",
   },
   {
-    title: "Autores",
+    title: "Authors",
     url: "/authors",
     icon: Users,
     headerIcon: "/author.svg",
@@ -38,7 +38,7 @@ const menuItems = [
     darkColor: "#0ea5e9",
   },
   {
-    title: "Estadísticas",
+    title: "Statistics",
     url: "/stats",
     icon: BarChart3,
     headerIcon: "/static.svg",
@@ -47,7 +47,7 @@ const menuItems = [
     darkColor: "#ef4444",
   },
   {
-    title: "Citas",
+    title: "Quotes",
     url: "/quotes",
     icon: Quote,
     headerIcon: "/quote.svg",
@@ -56,7 +56,7 @@ const menuItems = [
     darkColor: "#22c55e",
   },
   {
-    title: "Desafíos",
+    title: "Challenges",
     url: "/challenges",
     icon: Trophy,
     headerIcon: "/challenge.svg",
@@ -79,7 +79,7 @@ export function NavigationMenu() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   
-  // Encontrar el item activo actual
+  // Find current active item
   const activeItem = menuItems.find(item => 
     pathname === item.url || 
     (item.url !== "/" && pathname.startsWith(item.url))
@@ -87,7 +87,7 @@ export function NavigationMenu() {
 
   return (
     <>
-      {/* Logo dinámico del header - Espaciado responsivo */}
+      {/* Dynamic header logo - Responsive spacing */}
       <div className="flex items-center gap-2 flex-shrink-0 pl-4 md:pl-8 lg:pl-44">
         <img 
           src={activeItem.headerIcon} 
@@ -101,7 +101,7 @@ export function NavigationMenu() {
         />
       </div>
 
-      {/* Menú de Escritorio */}
+      {/* Desktop Menu */}
       <nav className="hidden md:flex items-center gap-2 p-1 rounded-lg overflow-x-auto max-w-full mr-4 md:mr-8 lg:mr-44" 
         style={{ backgroundColor: `${menuItems[0].color}30` }}>
         {menuItems.map((item) => {
@@ -133,12 +133,12 @@ export function NavigationMenu() {
         })}
       </nav>
 
-      {/* Botón móvil y menú móvil */}
+      {/* Mobile button and mobile menu */}
       <div className="md:hidden mr-4">
         <button
           className="p-2 rounded-lg transition-colors hover:bg-accent"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Alternar menú"
+          aria-label="Toggle menu"
         >
           {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>

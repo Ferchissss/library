@@ -29,7 +29,6 @@ export default function RootLayout({
         <ViewModeProvider>
           <header className="border-b bg-background relative">
             <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
-              {/* NavigationMenu ahora maneja TODO: logo + menú */}
               <NavigationMenu />
             </div>
           </header>
