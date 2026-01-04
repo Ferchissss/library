@@ -236,3 +236,38 @@ body {
 .vis-time-axis .vis-text {
   font-size: 12px;
 }
+/*GALLERY*/
+.w-50 {
+  width: 12.5rem; /* 200px */
+}
+.w-60 {
+  width: 15rem; /* 240px */
+}
+.w-84 {
+  width: 21rem; /* 336px */
+}
+.left-65 {
+  left: 16.25rem; /* 260px */
+}
+.right-65 {
+  right: 16.25rem; /* 260px */
+}
+.rotate-30 {
+  transform: rotate(30deg);
+}
+.bg-pattern {
+  background-image: url('/gallery/3.jpg');
+  background-repeat: repeat;
+  background-size: contain;
+  background-position: top left;
+  background-attachment: fixed;
+  height: 100%;
+  width: 100%;
+}
+/*FONTS*/
+.font-kranky {
+  font-family: var(--font-kranky), cursive;
+}
+.font-limelight {
+  font-family: var(--font-limelight), serif;
+}

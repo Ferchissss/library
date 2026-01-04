@@ -4,12 +4,23 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { 
-  BookOpen, Tag, Users, BarChart3, Quote, Trophy, Layers,
+  BookOpen, Tag, Users, BarChart3, Quote, Trophy, Layers, Image,
   Menu, X 
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 // Configuration with your SVG names
-const menuItems = [
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  headerIcon: string;
+  headerLogo: string;
+  color: string;
+  darkColor: string;
+}
+
+const menuItems: MenuItem[] = [
   {
     title: "My Library",
     url: "/",
@@ -73,6 +84,15 @@ const menuItems = [
     color: "#fbf3dd",
     darkColor: "#eab308",
   },
+  {
+    title: "Gallery",
+    url: "/gallery",
+    icon: Image,
+    headerIcon: "/gallery.svg",
+    headerLogo: "/gallery1.svg",
+    color: "#e8f4fd",
+    darkColor: "#3b82f6",
+  },
 ]
 
 export function NavigationMenu() {
@@ -107,6 +127,7 @@ export function NavigationMenu() {
         {menuItems.map((item) => {
           const isActive = pathname === item.url || 
             (item.url !== "/" && pathname.startsWith(item.url))
+          const Icon = item.icon 
           
           return (
             <Link
@@ -121,9 +142,9 @@ export function NavigationMenu() {
                 transform: isActive ? 'scale(1.05)' : 'scale(1)',
               }}
             >
-              <item.icon 
+              <Icon 
                 className={`${isActive ? 'h-5 w-5' : 'h-4 w-4'}`} 
-                style={{ color: item.darkColor }} 
+                color={item.darkColor} 
               />
               <span className={`font-bold ${isActive ? 'text-sm' : 'text-xs'} hidden sm:inline`}>
                 {item.title}
@@ -150,6 +171,7 @@ export function NavigationMenu() {
               {menuItems.map((item) => {
                 const isActive = pathname === item.url || 
                   (item.url !== "/" && pathname.startsWith(item.url))
+                const Icon = item.icon 
                 
                 return (
                   <Link
@@ -164,9 +186,9 @@ export function NavigationMenu() {
                     }}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <item.icon 
+                    <Icon 
                       className={`${isActive ? 'h-5 w-5' : 'h-4 w-4'}`} 
-                      style={{ color: item.darkColor }} 
+                      color={item.darkColor} 
                     />
                     <span className={`font-bold ${isActive ? 'text-sm' : 'text-sm'}`}>
                       {item.title}

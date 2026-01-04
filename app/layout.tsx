@@ -1,19 +1,31 @@
-import type React from "react"
+// app/layout.tsx
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import { ViewModeProvider } from "@/components/view-mode-provider"
-import "../styles/globals.css"
-import { Toaster } from 'sonner'
-import { NavigationMenu } from "@/components/navigation-menu"
+import { Inter, Kranky, Limelight } from "next/font/google"
+import "@/styles/globals.css"
+import { Toaster } from "sonner"
 
-const inter = Inter({ subsets: ["latin"] })
+// Configura las fuentes con variables
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter", 
+})
+
+const kranky = Kranky({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-kranky", 
+})
+const limelight = Limelight({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-limelight", 
+})
 
 export const metadata: Metadata = {
   title: "Nook - Personal Reading Platform",
   description: "Your personal space to manage and organize your readings",
-  generator: "v0.dev",
   icons: {
-    icon: '/icon.svg', 
+    icon: "/icon.svg",
   },
 }
 
@@ -23,17 +35,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${kranky.variable} ${limelight.variable}`}>
       <body className={inter.className}>
         <Toaster position="top-right" />
-        <ViewModeProvider>
-          <header className="border-b bg-background relative">
-            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
-              <NavigationMenu />
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto">{children}</main>
-        </ViewModeProvider>
+        {children}
       </body>
     </html>
   )
