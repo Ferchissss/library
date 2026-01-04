@@ -6,7 +6,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <div className="relative w-full">
-        {/* Imagen decorativa izquierda - EXACTO */}
+        {/* Left decorative image - EXACT */}
         <img 
           src="/gallery/25.PNG" 
           alt="" 
@@ -18,7 +18,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
           className="hidden md:block absolute top-5 left-65 h-auto w-60 object-contain z-0" 
         />
 
-        {/* Imagen decorativa derecha - EXACTO */}
+        {/* Right decorative image - EXACT */}
         <img 
           src="/gallery/29.png" 
           alt="" 
@@ -30,21 +30,21 @@ function MainLayout({ children }: { children: React.ReactNode }) {
           className="hidden md:block absolute top-0 right-0 h-auto w-50 object-contain z-0" 
         />
 
-        {/* Contenedor principal de las imágenes - EXACTO */}
+        {/* Main image container - EXACT */}
         <div className="relative z-10 flex justify-center items-center gap-6 lg:gap-16 p-4 flex-wrap">
-          {/* Columna izquierda */}
+          {/* Left column */}
           <div className="hidden md:flex flex-col gap-4">
             <img src="/gallery/6.jpg" alt="" className="w-28 h-auto rounded-md shadow" />
             <img src="/gallery/7.jpg" alt="" className="w-28 h-auto rounded-md shadow" />
             <img src="/gallery/14.png" alt="" className="w-28 h-auto rounded-md shadow" />
           </div>
 
-          {/* Imagen central */}
+          {/* Center image */}
           <div>
             <img src="/gallery/11.jpg" alt="" className="w-64 h-auto rounded-xl shadow-lg" />
           </div>
 
-          {/* Columna derecha */}
+          {/* Right column */}
           <div className="hidden md:flex flex-col gap-4">
             <img src="/gallery/12.png" alt="" className="w-28 h-auto rounded-md shadow" />
             <img src="/gallery/13.png" alt="" className="w-28 h-auto rounded-md shadow" />

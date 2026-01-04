@@ -14,7 +14,7 @@ function GalleryHeader() {
   return (
     <header className="relative bg-[#384759] text-[#DCE4F2] px-6 py-0 flex justify-between items-center flex-wrap gap-4">
       
-      {/* Buscador para desktop */}
+      {/* Desktop search */}
       <div className="hidden lg:flex items-center gap-2 relative">
         <button 
           onClick={() => setSearchOpen(!searchOpen)} 
@@ -33,14 +33,14 @@ function GalleryHeader() {
         />
       </div>
 
-      {/* Título */}
+      {/* Title */}
       <h1 
         className="font-kranky text-4xl md:text-6xl font-bold text-center flex-1"
       >
         BOOKSHELF
       </h1>
 
-      {/* Menú hamburguesa para móvil */}
+      {/* Mobile hamburger menu */}
       <button 
         className="lg:hidden text-[#DCE4F2]" 
         onClick={() => setMenuOpen(!menuOpen)}
@@ -48,7 +48,7 @@ function GalleryHeader() {
         {menuOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Menú móvil */}
+      {/* Mobile menu */}
       {menuOpen && (
         <div className="fixed top-0 left-0 w-64 h-full bg-[#2A3140] p-6 shadow-xl z-50">
           <button 
@@ -86,7 +86,7 @@ function GalleryHeader() {
         </div>
       )}
 
-      {/* Menú para desktop */}
+      {/* Desktop menu */}
       <nav className="hidden lg:flex gap-4 text-[15px] font-semibold tracking-wide">
         <Link href="/" className="hover:text-[#91B0D9] transition">Back to Nook</Link>
         <Link href="/gallery" className="hover:text-[#91B0D9] transition">Gallery</Link>
